@@ -15,18 +15,16 @@ export async function uploadDocumentFile({ file, projectId, docId }) {
   const size = file.size;
 
   if (isCloudStorage) {
-    let uid = 'general';
-    try {
-      const { data } = await supabase.auth.getSession();
-      uid = data?.session?.user?.id || uid;
-    } catch {
-      // keep 'general' fallback
+    const { data } = await supabase.auth.getSession();
+    const uid = data?.session?.user?.id;
+    if (!uid) {
+      throw new Error('You are not signed in. Please sign in again and retry the upload.');
     }
     const path = `${uid}/${projectId || 'general'}/${docId}-${safeName(file.name)}`;
     const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
     if (error) throw error;
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return { hasFile: true, size, filePath: path, fileUrl: data.publicUrl };
+    const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return { hasFile: true, size, filePath: path, fileUrl: publicData.publicUrl };
   }
 
   return { hasFile: true, size, fileData: await toBase64(file) };

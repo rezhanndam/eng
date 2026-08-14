@@ -105,15 +105,18 @@ create policy "anon select documents" on storage.objects
   for select to anon using (bucket_id = 'documents');
 
 -- Authenticated owner can manage files under their own folder: {user_id}/...
+drop policy if exists "auth insert own documents" on storage.objects;
 create policy "auth insert own documents" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'documents' and name like auth.uid()::text || '/%');
 
+drop policy if exists "auth update own documents" on storage.objects;
 create policy "auth update own documents" on storage.objects
   for update to authenticated
-  using (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text)
-  with check (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'documents' and name like auth.uid()::text || '/%')
+  with check (bucket_id = 'documents' and name like auth.uid()::text || '/%');
 
+drop policy if exists "auth delete own documents" on storage.objects;
 create policy "auth delete own documents" on storage.objects
   for delete to authenticated
-  using (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'documents' and name like auth.uid()::text || '/%');
