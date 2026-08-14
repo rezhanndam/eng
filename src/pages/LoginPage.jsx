@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+  const canSignUp = !isCloudStorage;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,13 +88,15 @@ export default function LoginPage() {
             >
               Sign In
             </button>
-            <button
-              type="button"
-              onClick={() => switchMode('signup')}
-              className={`flex-1 h-9 text-[13px] font-semibold rounded-lg transition-colors cursor-pointer ${mode === 'signup' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-            >
-              Create Account
-            </button>
+            {canSignUp && (
+              <button
+                type="button"
+                onClick={() => switchMode('signup')}
+                className={`flex-1 h-9 text-[13px] font-semibold rounded-lg transition-colors cursor-pointer ${mode === 'signup' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              >
+                Create Account
+              </button>
+            )}
           </div>
 
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
