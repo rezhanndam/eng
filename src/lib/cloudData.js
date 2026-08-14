@@ -1,18 +1,18 @@
 import { supabase, isCloudStorage } from './supabase';
 
-const TABLE = 'eng_workspace';
+const TABLE = 'workspaces';
 
 export const isCloudData = isCloudStorage;
 
-export async function loadWorkspace() {
-  const { data, error } = await supabase.from(TABLE).select('data').eq('id', 1).maybeSingle();
+export async function loadWorkspace(userId) {
+  const { data, error } = await supabase.from(TABLE).select('data').eq('user_id', userId).maybeSingle();
   if (error) throw error;
   return data?.data || null;
 }
 
-export async function saveWorkspace(payload) {
+export async function saveWorkspace(userId, payload) {
   const { error } = await supabase
     .from(TABLE)
-    .upsert({ id: 1, data: payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    .upsert({ user_id: userId, data: payload, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) throw error;
 }

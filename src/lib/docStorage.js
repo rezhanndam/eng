@@ -15,7 +15,14 @@ export async function uploadDocumentFile({ file, projectId, docId }) {
   const size = file.size;
 
   if (isCloudStorage) {
-    const path = `${projectId || 'general'}/${docId}-${safeName(file.name)}`;
+    let uid = 'general';
+    try {
+      const { data } = await supabase.auth.getSession();
+      uid = data?.session?.user?.id || uid;
+    } catch {
+      // keep 'general' fallback
+    }
+    const path = `${uid}/${projectId || 'general'}/${docId}-${safeName(file.name)}`;
     const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);

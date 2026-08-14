@@ -31,7 +31,8 @@ import {
 
 function NavigationWrapper() {
   const { showToast } = useToast();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const userId = user?.id;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load state from localStorage or fallback to initial data
@@ -97,12 +98,12 @@ function NavigationWrapper() {
     let toastShown = false;
 
     async function initCloud() {
-      if (!isCloudData) {
+      if (!isCloudData || !userId) {
         setCloudSynced(false);
         return;
       }
       try {
-        const remote = await loadWorkspace();
+        const remote = await loadWorkspace(userId);
         if (cancelled) return;
         if (remote && Array.isArray(remote.projects)) {
           if (Array.isArray(remote.tasks)) setTasks(remote.tasks);
@@ -131,16 +132,16 @@ function NavigationWrapper() {
     return () => {
       cancelled = true;
     };
-  }, [showToast]);
+  }, [showToast, userId]);
 
   // Debounced upsert of the whole workspace to Supabase whenever anything changes.
   const saveTimer = useRef(null);
   useEffect(() => {
-    if (!isCloudData || !cloudSynced) return;
+    if (!isCloudData || !cloudSynced || !userId) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       const snapshot = stateRef.current;
-      saveWorkspace({
+      saveWorkspace(userId, {
         version: 1,
         projects: snapshot.projects,
         tasks: snapshot.tasks,
@@ -152,7 +153,7 @@ function NavigationWrapper() {
       }).catch((e) => console.error('Cloud save failed:', e));
     }, 1000);
     return () => clearTimeout(saveTimer.current);
-  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced]);
+  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced, userId]);
 
   // Persist to localStorage on change
   useEffect(() => {
@@ -453,7 +454,14 @@ function NavigationWrapper() {
 }
 
 function AuthGate() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
+  if (!ready) {
+    return (
+      <main className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-[3px] border-slate-200 dark:border-slate-700 border-t-blue-600 rounded-full animate-spin" />
+      </main>
+    );
+  }
   if (!user) return <LoginPage />;
   return <NavigationWrapper />;
 }
