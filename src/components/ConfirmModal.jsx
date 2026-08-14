@@ -16,7 +16,7 @@ export default function ConfirmModal({
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-sm w-full overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
           <h3 className="font-bold text-slate-800 dark:text-slate-100 text-[15px]">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close dialog" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>

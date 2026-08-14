@@ -30,7 +30,7 @@ export default function Sidebar({ activeProject, onSwitchProject, open = false, 
           <span className="text-[15px] font-bold text-slate-900 dark:text-slate-100 leading-none">{BRAND.name}</span>
           <span className="text-[11px] text-slate-400 dark:text-slate-500 block leading-none mt-0.5">{BRAND.subtitle}</span>
         </div>
-        <button onClick={onClose} className="ml-auto lg:hidden p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+        <button onClick={onClose} aria-label="Close menu" className="ml-auto lg:hidden p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
           <X className="w-5 h-5" />
         </button>
       </div>

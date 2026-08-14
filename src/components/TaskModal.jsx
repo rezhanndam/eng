@@ -68,6 +68,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
           </h3>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

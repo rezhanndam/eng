@@ -411,7 +411,7 @@ function NavigationWrapper() {
       <Sidebar activeProject={activeProject} onSwitchProject={handleSwitchProject} open={isSidebarOpen} onClose={closeSidebar} />
       <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
         <div className="flex items-center justify-between lg:hidden mb-6">
-          <button onClick={() => setIsSidebarOpen(true)} className="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+          <button onClick={() => setIsSidebarOpen(true)} aria-label="Open menu" className="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
             <Menu className="w-5 h-5" />
           </button>
         </div>

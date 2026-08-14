@@ -24,7 +24,7 @@ export function ToastProvider({ children }) {
   const showToast = useCallback(
     (message, type = 'success', duration = 3000) => {
       const id = Date.now() + Math.random();
-      setToasts((prev) => [...prev, { id, message, type }]);
+      setToasts((prev) => [...prev, { id, message, type }].slice(-5));
       setTimeout(() => dismiss(id), duration);
     },
     [dismiss]

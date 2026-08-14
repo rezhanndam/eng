@@ -177,6 +177,7 @@ export default function DocumentsPage({
           placeholder={activeCategory ? `Search in ${activeCategory}...` : "Search all documents..."}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label={activeCategory ? `Search in ${activeCategory}` : 'Search all documents'}
           className="w-full h-10 pl-9 pr-3 text-[13px] bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
         />
       </div>
@@ -214,13 +215,14 @@ export default function DocumentsPage({
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{catDocsCount} files</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   {can('category.manage') && (
                     <>
                       <button
                         onClick={(e) => handleEditCatClick(e, cat)}
                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
                         title="Edit Category Name"
+                        aria-label={`Edit category ${cat}`}
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
@@ -228,6 +230,7 @@ export default function DocumentsPage({
                         onClick={(e) => handleDeleteCatClick(e, cat)}
                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
                         title="Delete Category"
+                        aria-label={`Delete category ${cat}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -282,6 +285,7 @@ export default function DocumentsPage({
                       onClick={() => handleDownload(doc)}
                       className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                       title="Download"
+                      aria-label={`Download ${doc.name}`}
                     >
                       <Download className="w-4 h-4" />
                     </button>
@@ -290,6 +294,7 @@ export default function DocumentsPage({
                         onClick={() => handleEditDocClick(doc)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                         title="Edit Document"
+                        aria-label={`Edit document ${doc.name}`}
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -299,6 +304,7 @@ export default function DocumentsPage({
                         onClick={() => setPendingDeleteDoc(doc)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                         title="Delete Document"
+                        aria-label={`Delete document ${doc.name}`}
                       >
                         <Trash className="w-4 h-4" />
                       </button>
