@@ -394,6 +394,8 @@ function NavigationWrapper() {
               onSaveProject={handleSaveProject}
               onDeleteProject={handleDeleteProject}
               teamMembers={teamMembers}
+              onSaveMember={handleSaveMember}
+              onDeleteMember={handleDeleteMember}
             />
           }
         />
