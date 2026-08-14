@@ -1,9 +1,32 @@
+import { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
-import { getDocumentUrl } from '../lib/docStorage';
+import { getDocumentUrl, getDocumentDownloadUrl } from '../lib/docStorage';
 
 export default function DocumentPreview({ documentItem, onClose, onDownload }) {
+  const [url, setUrl] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!documentItem) {
+      setUrl('');
+      setDownloadUrl('');
+      return undefined;
+    }
+    setUrl('');
+    setDownloadUrl('');
+    getDocumentUrl(documentItem).then((u) => {
+      if (!cancelled) setUrl(u);
+    });
+    getDocumentDownloadUrl(documentItem).then((u) => {
+      if (!cancelled) setDownloadUrl(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [documentItem]);
+
   if (!documentItem) return null;
-  const url = getDocumentUrl(documentItem);
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -13,13 +36,23 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
             {documentItem.name}
           </h3>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => onDownload?.(documentItem)}
-              className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download
-            </button>
+            {downloadUrl ? (
+              <a
+                href={downloadUrl}
+                className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </a>
+            ) : (
+              <button
+                onClick={() => onDownload?.(documentItem)}
+                className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </button>
+            )}
             <button
               onClick={onClose}
               aria-label="Close preview"
@@ -31,13 +64,9 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
         </div>
         <div className="flex-1 h-[75vh] bg-slate-100 dark:bg-slate-900">
           {url ? (
-            <iframe
-              src={url}
-              title={documentItem.name}
-              className="w-full h-full"
-            />
+            <iframe src={url} title={documentItem.name} className="w-full h-full" />
           ) : (
-            <p className="p-8 text-center text-slate-500">No preview available.</p>
+            <p className="p-8 text-center text-slate-500">Loading preview...</p>
           )}
         </div>
       </div>

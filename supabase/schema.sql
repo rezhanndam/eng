@@ -90,19 +90,24 @@ create policy "own workspace delete" on public.workspaces
 create index if not exists workspaces_user_id_idx on public.workspaces (user_id);
 
 -- ============================================================================
--- 3) STORAGE — the documents bucket stays publicly readable (public URL), but
---    writes are restricted to the authenticated owner and scoped to their folder.
+-- 3) STORAGE — PRIVATE bucket. Nothing is publicly readable; files are only
+--    accessed by the authenticated owner through short-lived signed URLs.
 -- ============================================================================
--- Remove previous permissive anon write policies if they exist.
+-- Remove all previous public/anon read-write policies.
 drop policy if exists "anon insert documents" on storage.objects;
 drop policy if exists "anon update documents" on storage.objects;
 drop policy if exists "anon delete documents" on storage.objects;
 drop policy if exists "anon select documents" on storage.objects;
 drop policy if exists "public insert documents" on storage.objects;
+drop policy if exists "public select documents" on storage.objects;
 
--- Anonymous read remains allowed so public URLs keep working.
-create policy "anon select documents" on storage.objects
-  for select to anon using (bucket_id = 'documents');
+-- Make the bucket private so public URLs stop working.
+update storage.buckets set public = false where id = 'documents';
+
+-- Owner can read files under their own folder: {user_id}/...
+create policy "auth select own documents" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'documents' and name like auth.uid()::text || '/%');
 
 -- Authenticated owner can manage files under their own folder: {user_id}/...
 drop policy if exists "auth insert own documents" on storage.objects;

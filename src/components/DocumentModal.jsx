@@ -90,14 +90,12 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
 
     const id = documentItem ? documentItem.id : generateDocId();
     let filePath;
-    let fileUrl;
 
     if (isCloudStorage && fileObject) {
       setUploading(true);
       try {
         const result = await uploadDocumentFile({ file: fileObject, projectId, docId: id });
         filePath = result.filePath;
-        fileUrl = result.fileUrl;
       } catch (error) {
         setUploading(false);
         setFileError(error?.message || 'Upload failed. Please try again.');
@@ -121,7 +119,6 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
     if (isCloudStorage) {
       if (fileObject) {
         payload.filePath = filePath;
-        payload.fileUrl = fileUrl;
       }
     } else {
       if (fileData) payload.fileData = fileData;

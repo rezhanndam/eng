@@ -23,8 +23,7 @@ export async function uploadDocumentFile({ file, projectId, docId }) {
     const path = `${uid}/${projectId || 'general'}/${docId}-${Date.now()}-${safeName(file.name)}`;
     const { error } = await supabase.storage.from(BUCKET).upload(path, file);
     if (error) throw error;
-    const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return { hasFile: true, size, filePath: path, fileUrl: publicData.publicUrl };
+    return { hasFile: true, size, filePath: path };
   }
 
   return { hasFile: true, size, fileData: await toBase64(file) };
@@ -36,4 +35,22 @@ export async function deleteDocumentFile(doc) {
   if (error) console.error('Supabase delete failed:', error.message);
 }
 
-export const getDocumentUrl = (doc) => (isCloudStorage && doc?.fileUrl) || doc?.fileData || '';
+// The bucket is private: files can only be read via short-lived signed URLs,
+// generated server-side for the authenticated owner only.
+export async function getDocumentUrl(doc) {
+  if (isCloudStorage && doc?.filePath) {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(doc.filePath, 3600);
+    if (error || !data?.signedUrl) return '';
+    return data.signedUrl;
+  }
+  return doc?.fileData || '';
+}
+
+export async function getDocumentDownloadUrl(doc) {
+  if (isCloudStorage && doc?.filePath) {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(doc.filePath, 3600, { download: true });
+    if (error || !data?.signedUrl) return '';
+    return data.signedUrl;
+  }
+  return doc?.fileData || '';
+}

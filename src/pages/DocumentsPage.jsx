@@ -6,7 +6,7 @@ import DocumentPreview from '../components/DocumentPreview';
 import EmptyState from '../components/EmptyState';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../hooks/useToast';
-import { getDocumentUrl, deleteDocumentFile } from '../lib/docStorage';
+import { getDocumentDownloadUrl, deleteDocumentFile } from '../lib/docStorage';
 
 const TYPE_ICONS = {
   PDF: 'bg-red-50 text-red-500',
@@ -97,13 +97,12 @@ export default function DocumentsPage({
     setIsCatModalOpen(true);
   };
 
-  const handleDownload = (doc) => {
-    const url = getDocumentUrl(doc);
+  const handleDownload = async (doc) => {
+    const url = await getDocumentDownloadUrl(doc);
     if (url) {
       const link = window.document.createElement('a');
       link.href = url;
       link.download = doc.name;
-      link.target = '_blank';
       window.document.body.appendChild(link);
       link.click();
       window.document.body.removeChild(link);
