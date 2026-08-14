@@ -27,3 +27,4 @@ dist-ssr
 .env
 .env.production
 diag-upload.mjs
+diag-sec.mjs
