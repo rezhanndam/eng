@@ -21,7 +21,8 @@ export default function KpiCards({ data = KPI_DATA }) {
       {data.map((kpi) => {
         const Icon = ICON_MAP[kpi.color] || FolderOpen;
         const clr = COLOR_MAP[kpi.color] || COLOR_MAP.blue;
-        const isPositive = kpi.trend > 0;
+        const trendVal = Number.isFinite(kpi.trend) ? kpi.trend : 0;
+        const isPositive = trendVal > 0;
 
         return (
           <div
@@ -42,7 +43,7 @@ export default function KpiCards({ data = KPI_DATA }) {
                 }`}
               >
                 {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {Math.abs(kpi.trend)}%
+                {Math.abs(trendVal)}%
               </span>
               <span className="text-slate-400 dark:text-slate-500">{kpi.vs}</span>
             </div>

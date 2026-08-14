@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import ProjectModal from '../components/ProjectModal';
 import ConfirmModal from '../components/ConfirmModal';
 
-export default function ProjectPortalPage({ projects, onSelectProject, can, onSaveProject, onDeleteProject }) {
+export default function ProjectPortalPage({ projects, onSelectProject, can, onSaveProject, onDeleteProject, teamMembers = [] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -119,6 +119,7 @@ export default function ProjectPortalPage({ projects, onSelectProject, can, onSa
         onClose={() => setIsModalOpen(false)}
         onSave={onSaveProject}
         project={selectedProject}
+        teamMembers={teamMembers}
       />
 
       <ConfirmModal

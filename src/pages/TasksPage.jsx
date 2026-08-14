@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import TaskModal from '../components/TaskModal';
 
-export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, activeProject }) {
+export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, activeProject, teamMembers = [] }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
 
@@ -21,8 +21,8 @@ export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, active
     <div>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">All Tasks</h1>
-          <p className="text-[13.5px] text-slate-400 mt-1">{tasks.length} tasks across all projects</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Active Project Tasks</h1>
+          <p className="text-[13.5px] text-slate-400 dark:text-slate-500 mt-1">{tasks.length} tasks in this project</p>
         </div>
         {can('task.create') && (
           <button
@@ -37,7 +37,7 @@ export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, active
 
       <DataTable
         tasks={tasks}
-        title="Tasks"
+        title="Project Tasks"
         onEditTask={can('task.edit') ? handleEditTask : undefined}
         onDeleteTask={can('task.delete') ? onDeleteTask : undefined}
       />
@@ -49,6 +49,7 @@ export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, active
         task={selectedTask}
         projectId={selectedTask ? selectedTask.projectId : activeProject?.id}
         projectName={selectedTask ? selectedTask.project : activeProject?.name}
+        teamMembers={teamMembers}
       />
     </div>
   );

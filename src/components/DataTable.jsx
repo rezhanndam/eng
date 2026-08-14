@@ -46,6 +46,11 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
 
   const filteredTasks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
+    const getDeadlineTime = (deadline) => {
+      const d = new Date(deadline);
+      return Number.isNaN(d.getTime()) ? Infinity : d.getTime();
+    };
+
     return tasks
       .filter((task) => {
         const matchesQuery = !normalizedQuery || [task.id, task.task, task.project, task.assignee]
@@ -60,7 +65,7 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
           return (rank[a.priority] ?? 3) - (rank[b.priority] ?? 3);
         }
         if (sortBy === 'task') return a.task.localeCompare(b.task);
-        return new Date(a.deadline) - new Date(b.deadline);
+        return getDeadlineTime(a.deadline) - getDeadlineTime(b.deadline);
       });
   }, [tasks, query, status, priority, sortBy]);
 

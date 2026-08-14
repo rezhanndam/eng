@@ -105,7 +105,7 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
       }
     }
 
-    onSave({
+    const payload = {
       id,
       name: name.trim(),
       type,
@@ -116,10 +116,18 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
         month: 'short',
         year: 'numeric',
       }),
-      fileData: isCloudStorage ? undefined : (fileData || undefined),
-      filePath,
-      fileUrl,
-    });
+    };
+
+    if (isCloudStorage) {
+      if (fileObject) {
+        payload.filePath = filePath;
+        payload.fileUrl = fileUrl;
+      }
+    } else {
+      if (fileData) payload.fileData = fileData;
+    }
+
+    onSave(payload);
     onClose();
   };
 

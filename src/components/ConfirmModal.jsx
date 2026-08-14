@@ -33,7 +33,7 @@ export default function ConfirmModal({
             Cancel
           </button>
           <button
-            onClick={() => { onConfirm(); onClose(); }}
+            onClick={() => { if (typeof onConfirm === 'function') onConfirm(); onClose(); }}
             className={`h-9 px-4 text-[13px] font-medium rounded-xl text-white transition-all cursor-pointer active:scale-95 ${destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}
           >
             {confirmLabel}

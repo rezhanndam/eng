@@ -4,6 +4,11 @@ import { USERS, ROLE_PERMISSIONS } from '../auth';
 import { AuthContext } from './contexts';
 
 const STORAGE_KEY = 'eng_user';
+const DATA_KEYS = ['eng_projects', 'eng_tasks', 'eng_documents', 'eng_categories', 'eng_activity', 'eng_team', 'eng_daily_reports', 'activeProjectId'];
+
+function clearWorkspaceCache() {
+  DATA_KEYS.forEach(key => localStorage.removeItem(key));
+}
 
 function toSafeUser(legacyUser) {
   const { password: _ignored, ...safeUser } = legacyUser;
@@ -111,6 +116,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    clearWorkspaceCache();
     if (!isCloudStorage) {
       setUser(null);
       return;

@@ -9,7 +9,8 @@ export default function GaugeChart({
 }) {
   const { isDark } = useTheme();
   const totalSegments = 30;
-  const filledSegments = Math.round((percentage / 100) * totalSegments);
+  const validPercentage = Number.isFinite(percentage) ? Math.max(0, Math.min(100, percentage)) : 0;
+  const filledSegments = Math.round((validPercentage / 100) * totalSegments);
   const radius = 80;
   const cx = 100;
   const cy = 95;

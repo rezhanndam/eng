@@ -1,3 +1,4 @@
+import { ListChecks } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -8,6 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import EmptyState from './EmptyState';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -41,35 +43,47 @@ export default function ProjectChart({ projectTasks = [] }) {
     { status: 'Completed', count: statusCounts['Completed'], color: '#10b981' },
   ];
 
+  const hasData = chartData.some(d => d.count > 0);
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 shadow-sm flex-1">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-[15px] font-semibold text-slate-800 dark:text-slate-100">Task Status Distribution</h3>
       </div>
 
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={chartData} barSize={40}>
-          <CartesianGrid vertical={false} stroke="#f1f5f9" strokeOpacity={0.2} />
-          <XAxis
-            dataKey="status"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: '#94a3b8', fontSize: 12 }}
+      {!hasData ? (
+        <div className="h-[260px] flex items-center justify-center">
+          <EmptyState 
+            icon={ListChecks}
+            title="No task data"
+            description="Add tasks to see status distribution."
           />
-          <YAxis
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: '#94a3b8', fontSize: 12 }}
-            allowDecimals={false}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={false} />
-          <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={chartData} barSize={40}>
+            <CartesianGrid vertical={false} stroke="#f1f5f9" strokeOpacity={0.2} />
+            <XAxis
+              dataKey="status"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              allowDecimals={false}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={false} />
+            <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }

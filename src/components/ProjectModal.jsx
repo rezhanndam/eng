@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { TEAM_MEMBERS } from '../data';
+import { isValidDisplayDate } from '../utils/dates';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
 
@@ -11,11 +12,11 @@ const generateProjectId = () => {
   return `proj-${Date.now().toString(36)}`;
 };
 
-export default function ProjectModal({ isOpen, onClose, onSave, project = null }) {
+export default function ProjectModal({ isOpen, onClose, onSave, project = null, teamMembers = [] }) {
   const [name, setName] = useState('');
   const [status, setStatus] = useState('Planning');
   const [deadline, setDeadline] = useState('');
-  const [lead, setLead] = useState(TEAM_MEMBERS[0]?.name || '');
+  const [lead, setLead] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [deadlineError, setDeadlineError] = useState('');
 
@@ -24,24 +25,24 @@ export default function ProjectModal({ isOpen, onClose, onSave, project = null }
       setName(project.name);
       setStatus(project.status || 'Planning');
       setDeadline(project.deadline || '');
-      setLead(project.lead || TEAM_MEMBERS[0]?.name || '');
+      setLead(project.lead || teamMembers[0]?.name || TEAM_MEMBERS[0]?.name || '');
       setColor(project.color || COLORS[0]);
     } else {
       setName('');
       setStatus('Planning');
       setDeadline('');
-      setLead(TEAM_MEMBERS[0]?.name || '');
+      setLead(teamMembers[0]?.name || TEAM_MEMBERS[0]?.name || '');
       setColor(COLORS[0]);
     }
     setDeadlineError('');
-  }, [project, isOpen]);
+  }, [project, isOpen, teamMembers]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    if (!/^\d{1,2} [A-Za-z]{3} \d{4}$/.test(deadline.trim()) || Number.isNaN(new Date(deadline).getTime())) {
+    if (!isValidDisplayDate(deadline.trim())) {
       setDeadlineError('Invalid date format. Use e.g. "30 Sep 2026".');
       return;
     }
@@ -137,11 +138,11 @@ export default function ProjectModal({ isOpen, onClose, onSave, project = null }
               onChange={(e) => setLead(e.target.value)}
               className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
             >
-              {!TEAM_MEMBERS.some((m) => m.name === lead) && lead && (
+              {!teamMembers.some((m) => m.name === lead) && lead && (
                 <option value={lead}>{lead} (legacy)</option>
               )}
-              {TEAM_MEMBERS.map((m) => (
-                <option key={m.name} value={m.name}>
+              {teamMembers.map((m) => (
+                <option key={m.id || m.name} value={m.name}>
                   {m.name} ({m.role})
                 </option>
               ))}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { TEAM_MEMBERS } from '../data';
+import { isValidDisplayDate } from '../utils/dates';
 
 const generateTaskId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -9,9 +9,9 @@ const generateTaskId = () => {
   return `TSK-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 };
 
-export default function TaskModal({ isOpen, onClose, onSave, task = null, projectId, projectName }) {
+export default function TaskModal({ isOpen, onClose, onSave, task = null, projectId, projectName, teamMembers = [] }) {
   const [taskName, setTaskName] = useState('');
-  const [assignee, setAssignee] = useState(TEAM_MEMBERS[0]?.name || '');
+  const [assignee, setAssignee] = useState('');
   const [priority, setPriority] = useState('Medium');
   const [status, setStatus] = useState('Pending');
   const [deadline, setDeadline] = useState('');
@@ -26,21 +26,17 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
       setDeadline(task.deadline);
     } else {
       setTaskName('');
-      setAssignee(TEAM_MEMBERS[0]?.name || '');
+      setAssignee(teamMembers[0]?.name || '');
       setPriority('Medium');
       setStatus('Pending');
       setDeadline('');
     }
     setDeadlineError('');
-  }, [task, isOpen]);
+  }, [task, isOpen, teamMembers]);
 
   if (!isOpen) return null;
 
-  const isValidDeadline = (value) => {
-    const formatted = value.trim();
-    if (!/^\d{1,2} [A-Za-z]{3} \d{4}$/.test(formatted)) return false;
-    return !Number.isNaN(new Date(formatted).getTime());
-  };
+  const isValidDeadline = (value) => isValidDisplayDate(value);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -102,13 +98,13 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
               onChange={(e) => setAssignee(e.target.value)}
               className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
             >
-              {!TEAM_MEMBERS.some((m) => m.name === assignee) && assignee && (
+              {!teamMembers.some((m) => m.name === assignee) && assignee && (
                 <option key={assignee} value={assignee}>
                   {assignee} (legacy)
                 </option>
               )}
-              {TEAM_MEMBERS.map((m) => (
-                <option key={m.name} value={m.name}>
+              {teamMembers.map((m) => (
+                <option key={m.id || m.name} value={m.name}>
                   {m.name} ({m.role})
                 </option>
               ))}

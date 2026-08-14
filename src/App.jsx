@@ -96,15 +96,19 @@ function NavigationWrapper() {
   useEffect(() => {
     let cancelled = false;
     let toastShown = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 2;
 
     async function initCloud() {
       if (!isCloudData || !userId) {
         setCloudSynced(false);
         return;
       }
+      
       try {
         const remote = await loadWorkspace(userId);
         if (cancelled) return;
+        
         if (remote && Array.isArray(remote.projects)) {
           if (Array.isArray(remote.tasks)) setTasks(remote.tasks);
           if (Array.isArray(remote.documents)) setDocuments(remote.documents.map((d, i) => ({ ...d, id: d.id || `legacy-doc-${i}` })));
@@ -113,6 +117,7 @@ function NavigationWrapper() {
           if (Array.isArray(remote.team)) setTeamMembers(remote.team.map((m, i) => ({ ...m, id: m.id || `mem-legacy-${i}` })));
           if (remote.dailyReports && typeof remote.dailyReports === 'object') setDailyReports(remote.dailyReports);
           setProjects(remote.projects);
+          
           if (!toastShown) {
             toastShown = true;
             showToast('Cloud sync aktif — data dimuat dari cloud.', 'info');
@@ -124,7 +129,15 @@ function NavigationWrapper() {
         setCloudSynced(true);
       } catch (e) {
         console.error('Cloud load failed:', e);
-        if (!cancelled) setCloudSynced(false);
+        if (cancelled) return;
+        
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          setTimeout(initCloud, 2000 * retryCount);
+        } else {
+          showToast('Cloud sync gagal terhubung. Menggunakan data lokal.', 'error');
+          setCloudSynced(false);
+        }
       }
     }
 
@@ -150,10 +163,13 @@ function NavigationWrapper() {
         activity: snapshot.activity,
         team: snapshot.teamMembers,
         dailyReports: snapshot.dailyReports,
-      }).catch((e) => console.error('Cloud save failed:', e));
-    }, 1000);
+      }).catch((e) => {
+        console.error('Cloud save failed:', e);
+        showToast('Gagal sinkron ke cloud. Perubahan disimpan lokal.', 'error');
+      });
+    }, 1500);
     return () => clearTimeout(saveTimer.current);
-  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced, userId]);
+  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced, userId, showToast]);
 
   // Persist to localStorage on change
   useEffect(() => {
@@ -377,6 +393,7 @@ function NavigationWrapper() {
               can={can}
               onSaveProject={handleSaveProject}
               onDeleteProject={handleDeleteProject}
+              teamMembers={teamMembers}
             />
           }
         />
@@ -422,6 +439,7 @@ function NavigationWrapper() {
                 onDeleteTask={handleDeleteTask}
                 can={can}
                 activeProject={activeProject}
+                teamMembers={teamMembers}
               />
             }
           />
@@ -443,7 +461,7 @@ function NavigationWrapper() {
             }
           />
           <Route path="/team" element={<TeamPage projectTasks={isolatedTasks} teamMembers={teamMembers} canManage={can('team.manage')} onSaveMember={handleSaveMember} onDeleteMember={handleDeleteMember} />} />
-          <Route path="/reports" element={<ReportsPage projects={computedProjects} tasks={isolatedTasks} documents={isolatedDocs} activity={activity} />} />
+          <Route path="/reports" element={<ReportsPage projects={activeProject ? [activeProject] : []} tasks={isolatedTasks} documents={isolatedDocs} activity={activity.filter((item) => item.projectId === activeProjectId)} />} />
           <Route path="/activity" element={<JobActivityReportPage activity={activity.filter((item) => item.projectId === activeProjectId)} activeProject={activeProject} dailyReports={projectDailyReports} onSaveDailyReport={handleSaveDailyReport} onDeleteDailyReport={handleDeleteDailyReport} />} />
           <Route path="/messages" element={<Navigate to="/activity" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
