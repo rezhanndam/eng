@@ -20,8 +20,8 @@ export async function uploadDocumentFile({ file, projectId, docId }) {
     if (!uid) {
       throw new Error('You are not signed in. Please sign in again and retry the upload.');
     }
-    const path = `${uid}/${projectId || 'general'}/${docId}-${safeName(file.name)}`;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+    const path = `${uid}/${projectId || 'general'}/${docId}-${Date.now()}-${safeName(file.name)}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(path, file);
     if (error) throw error;
     const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return { hasFile: true, size, filePath: path, fileUrl: publicData.publicUrl };
