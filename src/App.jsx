@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { ThemeProvider } from './context/ThemeContext';
@@ -9,6 +9,7 @@ import { useAuth } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import { deleteDocumentFile } from './lib/docStorage';
+import { isCloudData, loadWorkspace, saveWorkspace } from './lib/cloudData';
 
 const ProjectPortalPage = lazy(() => import('./pages/ProjectPortalPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -81,9 +82,77 @@ function NavigationWrapper() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [cloudSynced, setCloudSynced] = useState(null);
+
+  const stateRef = useRef({ projects, tasks, documents, categories, activity, teamMembers, dailyReports });
+  stateRef.current = { projects, tasks, documents, categories, activity, teamMembers, dailyReports };
+
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
+
+  // Load workspace from Supabase on mount; fall back to localStorage silently.
+  useEffect(() => {
+    let cancelled = false;
+    let toastShown = false;
+
+    async function initCloud() {
+      if (!isCloudData) {
+        setCloudSynced(false);
+        return;
+      }
+      try {
+        const remote = await loadWorkspace();
+        if (cancelled) return;
+        if (remote && Array.isArray(remote.projects)) {
+          if (Array.isArray(remote.tasks)) setTasks(remote.tasks);
+          if (Array.isArray(remote.documents)) setDocuments(remote.documents.map((d, i) => ({ ...d, id: d.id || `legacy-doc-${i}` })));
+          if (remote.categories && typeof remote.categories === 'object') setCategories(remote.categories);
+          if (Array.isArray(remote.activity)) setActivity(remote.activity);
+          if (Array.isArray(remote.team)) setTeamMembers(remote.team.map((m, i) => ({ ...m, id: m.id || `mem-legacy-${i}` })));
+          if (remote.dailyReports && typeof remote.dailyReports === 'object') setDailyReports(remote.dailyReports);
+          setProjects(remote.projects);
+          if (!toastShown) {
+            toastShown = true;
+            showToast('Cloud sync aktif — data dimuat dari cloud.', 'info');
+          }
+        } else if (!toastShown) {
+          toastShown = true;
+          showToast('Cloud sync aktif — data lokal diunggah ke cloud.', 'info');
+        }
+        setCloudSynced(true);
+      } catch (e) {
+        console.error('Cloud load failed:', e);
+        if (!cancelled) setCloudSynced(false);
+      }
+    }
+
+    initCloud();
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
+
+  // Debounced upsert of the whole workspace to Supabase whenever anything changes.
+  const saveTimer = useRef(null);
+  useEffect(() => {
+    if (!isCloudData || !cloudSynced) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const snapshot = stateRef.current;
+      saveWorkspace({
+        version: 1,
+        projects: snapshot.projects,
+        tasks: snapshot.tasks,
+        documents: snapshot.documents,
+        categories: snapshot.categories,
+        activity: snapshot.activity,
+        team: snapshot.teamMembers,
+        dailyReports: snapshot.dailyReports,
+      }).catch((e) => console.error('Cloud save failed:', e));
+    }, 1000);
+    return () => clearTimeout(saveTimer.current);
+  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced]);
 
   // Persist to localStorage on change
   useEffect(() => {
