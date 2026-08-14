@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { FileText, Download, Trash, Upload, Search, Folder, ChevronRight, Plus, Edit, Trash2, FolderOpen } from 'lucide-react';
+import { FileText, Download, Trash, Upload, Search, Folder, ChevronRight, Plus, Edit, Trash2, FolderOpen, Eye } from 'lucide-react';
 import CategoryModal from '../components/CategoryModal';
 import DocumentModal from '../components/DocumentModal';
+import DocumentPreview from '../components/DocumentPreview';
 import EmptyState from '../components/EmptyState';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../hooks/useToast';
@@ -40,6 +41,9 @@ export default function DocumentsPage({
   // Confirm Delete State
   const [pendingDeleteCat, setPendingDeleteCat] = useState(null);
   const [pendingDeleteDoc, setPendingDeleteDoc] = useState(null);
+
+  // Preview State
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   // Filter documents by search and active category
   const filteredDocs = documents.filter((doc) => {
@@ -281,6 +285,16 @@ export default function DocumentsPage({
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    {doc.type === 'PDF' && (
+                      <button
+                        onClick={() => setPreviewDoc(doc)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                        title="Preview"
+                        aria-label={`Preview ${doc.name}`}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDownload(doc)}
                       className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
@@ -333,6 +347,13 @@ export default function DocumentsPage({
         documentItem={selectedDoc}
         categories={categories}
         projectId={activeProjectId}
+      />
+
+      {/* Document Preview */}
+      <DocumentPreview
+        documentItem={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        onDownload={handleDownload}
       />
 
       {/* Confirm Delete Category */}
