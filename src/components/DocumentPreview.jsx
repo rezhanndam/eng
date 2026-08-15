@@ -38,8 +38,8 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-4xl flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-5xl flex flex-col overflow-hidden max-h-[calc(100vh-2rem)]">
+        <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-700 shrink-0">
           <h3 className="font-bold text-slate-800 dark:text-slate-100 text-[15px] truncate">
             {documentItem.name}
           </h3>
@@ -73,7 +73,7 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
             </button>
           </div>
         </div>
-        <div className="flex-1 h-[75vh] bg-slate-100 dark:bg-slate-900">
+        <div className="flex-1 min-h-0 h-[75vh] bg-slate-100 dark:bg-slate-900">
           {loading ? (
             <p className="p-8 text-center text-slate-500">Loading preview...</p>
           ) : url ? (
