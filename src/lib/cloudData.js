@@ -92,22 +92,52 @@ const collectTombstones = (local, remote) => {
   return map;
 };
 
+const mergeTrash = (local, remote) => {
+  const map = new Map();
+  for (const t of [...(local?.trash || []), ...(remote?.trash || [])]) {
+    if (!t || !t.type || !t.id) continue;
+    const key = `${t.type}:${t.id}`;
+    const existing = map.get(key);
+    if (!existing || (t.deletedAt || '') > (existing.deletedAt || '')) map.set(key, t);
+  }
+  return [...map.values()]
+    .sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''))
+    .slice(0, 200);
+};
+
 export function mergeWorkspace(local, remote) {
   const tombMap = collectTombstones(local, remote);
   const deleted = new Set(tombMap.keys());
-  const isDeleted = (type, id) => deleted.has(`${type}:${id}`);
-  const isProjectGone = (projectId) => deleted.has(`project:${projectId}`);
 
-  const projects = mergeById(local?.projects, remote?.projects, 'id').filter((p) => !isDeleted('project', p.id));
-  const tasks = mergeById(local?.tasks, remote?.tasks, 'id').filter((t) => !isProjectGone(t.projectId) && !isDeleted('task', t.id));
-  const documents = mergeById(local?.documents, remote?.documents, 'id').filter((d) => !isProjectGone(d.projectId) && !isDeleted('document', d.id));
-  const team = mergeById(local?.team, remote?.team, 'id').filter((m) => !isDeleted('member', m.id));
+  // A tombstone only wins if it is newer than the item's own updatedAt.
+  // Restoring an item bumps its updatedAt, so a stale tombstone from another
+  // device can no longer re-delete it.
+  const isDeleted = (type, id, item) => {
+    const tomb = tombMap.get(`${type}:${id}`);
+    if (!tomb) return false;
+    return !(item?.updatedAt && item.updatedAt > tomb.ts);
+  };
+  const projectTombTs = (projectId) => tombMap.get(`project:${projectId}`)?.ts || '';
+
+  const projects = mergeById(local?.projects, remote?.projects, 'id').filter((p) => !isDeleted('project', p.id, p));
+  const tasks = mergeById(local?.tasks, remote?.tasks, 'id').filter((t) => {
+    const pt = projectTombTs(t.projectId);
+    const goneByProject = pt && (!t.updatedAt || t.updatedAt <= pt);
+    return !goneByProject && !isDeleted('task', t.id, t);
+  });
+  const documents = mergeById(local?.documents, remote?.documents, 'id').filter((d) => {
+    const pt = projectTombTs(d.projectId);
+    const goneByProject = pt && (!d.updatedAt || d.updatedAt <= pt);
+    return !goneByProject && !isDeleted('document', d.id, d);
+  });
+  const team = mergeById(local?.team, remote?.team, 'id').filter((m) => !isDeleted('member', m.id, m));
   const categories = mergeCategories(local?.categories, remote?.categories);
   for (const key of Object.keys(categories)) {
-    if (isProjectGone(key)) delete categories[key];
+    if (tombMap.has(`project:${key}`)) delete categories[key];
   }
   const activity = mergeActivity(local?.activity, remote?.activity);
   const dailyReports = mergeDailyReports(local?.dailyReports, remote?.dailyReports, deleted);
+  const trash = mergeTrash(local, remote);
 
   return {
     projects,
@@ -117,6 +147,7 @@ export function mergeWorkspace(local, remote) {
     activity,
     team,
     dailyReports,
+    trash,
     deleted: [...tombMap.values()].slice(-500),
   };
 }

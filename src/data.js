@@ -8,6 +8,7 @@ import {
   MessageSquare,
   FileText,
   Globe,
+  Trash2,
 } from 'lucide-react';
 
 export const BRAND = {
@@ -23,6 +24,7 @@ export const MAIN_NAV = [
   { icon: Users, label: 'Team', path: '/team' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: Activity, label: 'Job Activity Report', path: '/activity' },
+  { icon: Trash2, label: 'Trash', path: '/trash' },
 ];
 
 export const INTEGRATIONS = [

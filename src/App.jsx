@@ -18,6 +18,7 @@ const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const TeamPage = lazy(() => import('./pages/TeamPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const JobActivityReportPage = lazy(() => import('./pages/JobActivityReportPage'));
+const TrashPage = lazy(() => import('./pages/TrashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 
 // Import initial data
@@ -80,6 +81,11 @@ function NavigationWrapper() {
     try { return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
 
+  const [trash, setTrash] = useState(() => {
+    const saved = localStorage.getItem('eng_trash');
+    try { return saved ? JSON.parse(saved) : []; } catch { return []; }
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -87,8 +93,8 @@ function NavigationWrapper() {
 
   const deletedRef = useRef([]);
   const lastSavedUpdatedAt = useRef(null);
-  const stateRef = useRef({ projects, tasks, documents, categories, activity, teamMembers, dailyReports });
-  stateRef.current = { projects, tasks, documents, categories, activity, teamMembers, dailyReports, deleted: deletedRef.current };
+  const stateRef = useRef({ projects, tasks, documents, categories, activity, teamMembers, dailyReports, trash });
+  stateRef.current = { projects, tasks, documents, categories, activity, teamMembers, dailyReports, trash, deleted: deletedRef.current };
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -120,6 +126,7 @@ function NavigationWrapper() {
           if (Array.isArray(remote.activity)) setActivity(remote.activity);
           if (Array.isArray(remote.team)) setTeamMembers(remote.team.map((m, i) => ({ ...m, id: m.id || `mem-legacy-${i}` })));
           if (remote.dailyReports && typeof remote.dailyReports === 'object') setDailyReports(remote.dailyReports);
+          if (Array.isArray(remote.trash)) setTrash(remote.trash);
           setProjects(remote.projects);
           if (Array.isArray(remote.deleted)) deletedRef.current = remote.deleted;
 
@@ -171,6 +178,7 @@ function NavigationWrapper() {
           activity: snapshot.activity,
           team: snapshot.teamMembers,
           dailyReports: snapshot.dailyReports,
+          trash: snapshot.trash,
           deleted: snapshot.deleted,
         }, lastSavedUpdatedAt.current);
         lastSavedUpdatedAt.current = result.updatedAt;
@@ -182,6 +190,7 @@ function NavigationWrapper() {
           setActivity(result.merged.activity);
           setTeamMembers(result.merged.team);
           setDailyReports(result.merged.dailyReports);
+          setTrash(result.merged.trash || []);
           deletedRef.current = result.merged.deleted || [];
         }
       } catch (e) {
@@ -190,7 +199,7 @@ function NavigationWrapper() {
       }
     }, 1500);
     return () => clearTimeout(saveTimer.current);
-  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced, userId, showToast]);
+  }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, trash, cloudSynced, userId, showToast]);
 
   // Persist to localStorage on change
   useEffect(() => {
@@ -220,6 +229,10 @@ function NavigationWrapper() {
   useEffect(() => {
     localStorage.setItem('eng_daily_reports', JSON.stringify(dailyReports));
   }, [dailyReports]);
+
+  useEffect(() => {
+    localStorage.setItem('eng_trash', JSON.stringify(trash));
+  }, [trash]);
 
   const logActivity = (action, detail, projectId = activeProjectId) => {
     setActivity((previous) => [{ id: crypto.randomUUID(), projectId, action, detail, timestamp: new Date().toISOString() }, ...previous].slice(0, 50));
@@ -271,11 +284,13 @@ function NavigationWrapper() {
   const handleDeleteProject = (projectId) => {
     const project = projects.find((p) => p.id === projectId);
     const ts = new Date().toISOString();
+    const projTasks = tasks.filter((t) => t.projectId === projectId);
+    const projDocs = documents.filter((d) => d.projectId === projectId);
     deletedRef.current = [
       ...deletedRef.current,
       { type: 'project', id: projectId, ts },
-      ...tasks.filter((t) => t.projectId === projectId).map((t) => ({ type: 'task', id: t.id, ts })),
-      ...documents.filter((d) => d.projectId === projectId).map((d) => ({ type: 'document', id: d.id, ts })),
+      ...projTasks.map((t) => ({ type: 'task', id: t.id, ts })),
+      ...projDocs.map((d) => ({ type: 'document', id: d.id, ts })),
     ].slice(-500);
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
     setTasks((prev) => prev.filter((t) => t.projectId !== projectId));
@@ -285,13 +300,19 @@ function NavigationWrapper() {
       delete next[projectId];
       return next;
     });
+    setTrash((prev) => [
+      { type: 'project', id: projectId, item: { ...project, categories: categories[projectId] }, deletedAt: ts },
+      ...projTasks.map((t) => ({ type: 'task', id: t.id, item: t, deletedAt: ts })),
+      ...projDocs.map((d) => ({ type: 'document', id: d.id, item: d, deletedAt: ts })),
+      ...prev,
+    ]);
     if (activeProjectId === projectId) {
       setActiveProjectId('');
       localStorage.removeItem('activeProjectId');
       navigate('/');
     }
     logActivity('Deleted project', project?.name || projectId);
-    showToast('Project deleted.', 'info');
+    showToast('Project moved to trash.', 'info');
   };
 
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -331,21 +352,24 @@ function NavigationWrapper() {
 
   const handleDeleteTask = (taskId) => {
     const task = tasks.find((item) => item.id === taskId);
-    deletedRef.current = [...deletedRef.current, { type: 'task', id: taskId, ts: new Date().toISOString() }].slice(-500);
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
-
-    // Cascade: remove documents attached to this task so they do not linger
-    // as orphans in the Documents menu.
+    const ts = new Date().toISOString();
+    // Documents attached to the task are moved to trash too (not deleted
+    // permanently), so the whole task can be restored later.
     const attachedDocs = documents.filter((d) => task?.documentIds?.includes(d.id) || d.taskId === taskId);
-    if (attachedDocs.length) {
-      attachedDocs.forEach((doc) => deleteDocumentFile(doc));
-      const ts = new Date().toISOString();
-      deletedRef.current = [...deletedRef.current, ...attachedDocs.map((d) => ({ type: 'document', id: d.id, ts }))].slice(-500);
-      setDocuments((prev) => prev.filter((d) => !attachedDocs.some((ad) => ad.id === d.id)));
-    }
-
+    deletedRef.current = [
+      ...deletedRef.current,
+      { type: 'task', id: taskId, ts },
+      ...attachedDocs.map((d) => ({ type: 'document', id: d.id, ts })),
+    ].slice(-500);
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setDocuments((prev) => prev.filter((d) => !attachedDocs.some((ad) => ad.id === d.id)));
+    setTrash((prev) => [
+      { type: 'task', id: taskId, item: task, deletedAt: ts },
+      ...attachedDocs.map((d) => ({ type: 'document', id: d.id, item: d, deletedAt: ts })),
+      ...prev,
+    ]);
     logActivity('Deleted task', task?.task || taskId);
-    showToast('Task deleted.', 'info');
+    showToast('Task moved to trash.', 'info');
   };
 
   // Document CRUD Actions
@@ -364,9 +388,11 @@ function NavigationWrapper() {
   };
 
   const handleDeleteDocument = (doc) => {
-    deleteDocumentFile(doc);
-    deletedRef.current = [...deletedRef.current, { type: 'document', id: doc.id, ts: new Date().toISOString() }].slice(-500);
+    // File is kept in storage so the document can be restored from trash.
+    const ts = new Date().toISOString();
+    deletedRef.current = [...deletedRef.current, { type: 'document', id: doc.id, ts }].slice(-500);
     setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+    setTrash((prev) => [{ type: 'document', id: doc.id, item: doc, deletedAt: ts }, ...prev]);
     // Clean up the reference on the task it was attached to (if any).
     if (doc.taskId) {
       setTasks((prev) => prev.map((t) =>
@@ -376,7 +402,7 @@ function NavigationWrapper() {
       ));
     }
     logActivity('Deleted document', doc.name);
-    showToast('Document deleted.', 'info');
+    showToast('Document moved to trash.', 'info');
   };
 
   // Team Member CRUD Actions
@@ -396,10 +422,12 @@ function NavigationWrapper() {
 
   const handleDeleteMember = (memberId) => {
     const member = teamMembers.find((m) => m.id === memberId);
-    deletedRef.current = [...deletedRef.current, { type: 'member', id: memberId, ts: new Date().toISOString() }].slice(-500);
+    const ts = new Date().toISOString();
+    deletedRef.current = [...deletedRef.current, { type: 'member', id: memberId, ts }].slice(-500);
     setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
+    setTrash((prev) => [{ type: 'member', id: memberId, item: member, deletedAt: ts }, ...prev]);
     logActivity('Removed team member', member?.name || memberId);
-    showToast('Team member removed.', 'info');
+    showToast('Team member moved to trash.', 'info');
   };
 
   const projectDailyReports = dailyReports[activeProjectId] || [];
@@ -413,12 +441,73 @@ function NavigationWrapper() {
   };
 
   const handleDeleteDailyReport = (dateVal) => {
-    deletedRef.current = [...deletedRef.current, { type: 'daily', id: `${activeProjectId}:${dateVal}`, ts: new Date().toISOString() }].slice(-500);
+    const ts = new Date().toISOString();
+    const id = `${activeProjectId}:${dateVal}`;
+    const entry = (dailyReports[activeProjectId] || []).find((e) => e.dateVal === dateVal);
+    deletedRef.current = [...deletedRef.current, { type: 'daily', id, ts }].slice(-500);
     setDailyReports((prev) => ({
       ...prev,
       [activeProjectId]: (prev[activeProjectId] || []).filter((e) => e.dateVal !== dateVal),
     }));
+    setTrash((prev) => [{ type: 'daily', id, item: { ...entry, projectId: activeProjectId }, deletedAt: ts }, ...prev]);
     logActivity('Deleted daily report', dateVal);
+  };
+
+  // Trash / restore actions.
+  const restoreFromTrash = (entry) => {
+    const ts = new Date().toISOString();
+    // A project restore also brings its tasks & documents back.
+    const related = entry.type === 'project'
+      ? trash.filter((e) => (e.type === 'task' || e.type === 'document') && e.item?.projectId === entry.id)
+      : [];
+    const removeKeys = new Set([`${entry.type}:${entry.id}`, ...related.map((r) => `${r.type}:${r.id}`)]);
+    deletedRef.current = deletedRef.current.filter((t) => !removeKeys.has(`${t.type}:${t.id}`));
+    setTrash((prev) => prev.filter((e) => !removeKeys.has(`${e.type}:${e.id}`)));
+
+    if (entry.type === 'project') {
+      setProjects((prev) => (prev.some((p) => p.id === entry.id) ? prev : [...prev, { ...entry.item, updatedAt: ts }]));
+      if (entry.item?.categories) setCategories((prev) => ({ ...prev, [entry.id]: entry.item.categories }));
+      const restoredTasks = related.filter((r) => r.type === 'task').map((r) => ({ ...r.item, updatedAt: ts }));
+      const restoredDocs = related.filter((r) => r.type === 'document').map((r) => ({ ...r.item, updatedAt: ts }));
+      if (restoredTasks.length) setTasks((prev) => [...prev, ...restoredTasks.filter((t) => !prev.some((x) => x.id === t.id))]);
+      if (restoredDocs.length) setDocuments((prev) => [...prev, ...restoredDocs.filter((d) => !prev.some((x) => x.id === d.id))]);
+    } else if (entry.type === 'task') {
+      setTasks((prev) => (prev.some((t) => t.id === entry.id) ? prev : [...prev, { ...entry.item, updatedAt: ts }]));
+    } else if (entry.type === 'document') {
+      setDocuments((prev) => (prev.some((d) => d.id === entry.id) ? prev : [...prev, { ...entry.item, updatedAt: ts }]));
+    } else if (entry.type === 'member') {
+      setTeamMembers((prev) => (prev.some((m) => m.id === entry.id) ? prev : [...prev, { ...entry.item, updatedAt: ts }]));
+    } else if (entry.type === 'daily') {
+      setDailyReports((prev) => {
+        const projectId = entry.item?.projectId;
+        const list = projectId ? prev[projectId] || [] : [];
+        if (!projectId || list.some((e) => e.dateVal === entry.item.dateVal)) return prev;
+        return { ...prev, [projectId]: [...list, { ...entry.item, updatedAt: ts }] };
+      });
+    }
+    logActivity('Restored', entry.item?.name || entry.item?.task || entry.id);
+    showToast('Item restored from trash.');
+  };
+
+  const permanentDelete = (entry) => {
+    const related = entry.type === 'project'
+      ? trash.filter((e) => e.type === 'document' && e.item?.projectId === entry.id)
+      : [];
+    const removeKeys = new Set([`${entry.type}:${entry.id}`, ...related.map((r) => `document:${r.id}`)]);
+    if (entry.type === 'document' && entry.item?.filePath) deleteDocumentFile(entry.item);
+    related.forEach((r) => r.item?.filePath && deleteDocumentFile(r.item));
+    setTrash((prev) => prev.filter((e) => !removeKeys.has(`${e.type}:${e.id}`)));
+    logActivity('Permanently deleted', entry.item?.name || entry.item?.task || entry.id);
+    showToast('Item permanently deleted.', 'info');
+  };
+
+  const emptyTrash = () => {
+    trash.forEach((e) => {
+      if (e.type === 'document' && e.item?.filePath) deleteDocumentFile(e.item);
+    });
+    setTrash([]);
+    logActivity('Emptied trash', 'All deleted items were permanently removed');
+    showToast('Trash emptied.', 'info');
   };
 
   // Category Actions are scoped to the active project.
@@ -534,6 +623,18 @@ function NavigationWrapper() {
           <Route path="/reports" element={<ReportsPage projects={activeProject ? [activeProject] : []} tasks={isolatedTasks} documents={isolatedDocs} activity={activity.filter((item) => item.projectId === activeProjectId)} />} />
           <Route path="/activity" element={user?.role === 'viewer' ? <Navigate to="/dashboard" replace /> : <JobActivityReportPage activity={activity.filter((item) => item.projectId === activeProjectId)} activeProject={activeProject} dailyReports={projectDailyReports} onSaveDailyReport={handleSaveDailyReport} onDeleteDailyReport={handleDeleteDailyReport} />} />
           <Route path="/messages" element={<Navigate to="/activity" replace />} />
+          <Route
+            path="/trash"
+            element={
+              <TrashPage
+                trash={trash}
+                onRestore={restoreFromTrash}
+                onPermanentDelete={permanentDelete}
+                onEmptyTrash={emptyTrash}
+                can={can}
+              />
+            }
+          />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
