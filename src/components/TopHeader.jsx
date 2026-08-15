@@ -47,7 +47,9 @@ export default function TopHeader({ activeProject, tasks = [], reminders = 0, ac
     const link = document.createElement('a');
     link.href = url;
     link.download = `${activeProject.name.replaceAll(/[^a-z0-9]+/gi, '-').replaceAll(/(^-|-$)/g, '')}-tasks.csv`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
     showToast('Task CSV exported.');
   };

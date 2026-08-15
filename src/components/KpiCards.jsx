@@ -22,7 +22,7 @@ export default function KpiCards({ data = KPI_DATA }) {
         const Icon = ICON_MAP[kpi.color] || FolderOpen;
         const clr = COLOR_MAP[kpi.color] || COLOR_MAP.blue;
         const trendVal = Number.isFinite(kpi.trend) ? kpi.trend : 0;
-        const isPositive = trendVal > 0;
+        const isPositive = kpi.invert ? trendVal < 0 : trendVal > 0;
 
         return (
           <div

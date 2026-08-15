@@ -93,12 +93,13 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     if (!isCloudStorage) {
       const match = USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-      if (!match || match.password !== password) return false;
+      if (!match || match.password !== password) return { ok: false, error: 'Invalid email or password.' };
       setUser(toSafeUser(match));
-      return true;
+      return { ok: true };
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return !error;
+    if (error) return { ok: false, error: error.message || 'Invalid email or password.' };
+    return { ok: true };
   };
 
   const signUp = async (email, password, name) => {

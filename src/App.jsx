@@ -9,7 +9,7 @@ import { useAuth } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import { deleteDocumentFile } from './lib/docStorage';
-import { isCloudData, loadWorkspace, saveWorkspace } from './lib/cloudData';
+import { isCloudData, loadWorkspace, saveWorkspaceSafely } from './lib/cloudData';
 
 const ProjectPortalPage = lazy(() => import('./pages/ProjectPortalPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -85,8 +85,10 @@ function NavigationWrapper() {
 
   const [cloudSynced, setCloudSynced] = useState(null);
 
+  const deletedRef = useRef([]);
+  const lastSavedUpdatedAt = useRef(null);
   const stateRef = useRef({ projects, tasks, documents, categories, activity, teamMembers, dailyReports });
-  stateRef.current = { projects, tasks, documents, categories, activity, teamMembers, dailyReports };
+  stateRef.current = { projects, tasks, documents, categories, activity, teamMembers, dailyReports, deleted: deletedRef.current };
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -106,9 +108,11 @@ function NavigationWrapper() {
       }
       
       try {
-        const remote = await loadWorkspace(userId);
+        const loaded = await loadWorkspace(userId);
         if (cancelled) return;
-        
+        const remote = loaded?.data || null;
+        lastSavedUpdatedAt.current = loaded?.updatedAt || null;
+
         if (remote && Array.isArray(remote.projects)) {
           if (Array.isArray(remote.tasks)) setTasks(remote.tasks);
           if (Array.isArray(remote.documents)) setDocuments(remote.documents.map((d, i) => ({ ...d, id: d.id || `legacy-doc-${i}` })));
@@ -117,7 +121,8 @@ function NavigationWrapper() {
           if (Array.isArray(remote.team)) setTeamMembers(remote.team.map((m, i) => ({ ...m, id: m.id || `mem-legacy-${i}` })));
           if (remote.dailyReports && typeof remote.dailyReports === 'object') setDailyReports(remote.dailyReports);
           setProjects(remote.projects);
-          
+          if (Array.isArray(remote.deleted)) deletedRef.current = remote.deleted;
+
           if (!toastShown) {
             toastShown = true;
             showToast('Cloud sync aktif — data dimuat dari cloud.', 'info');
@@ -148,25 +153,41 @@ function NavigationWrapper() {
   }, [showToast, userId]);
 
   // Debounced upsert of the whole workspace to Supabase whenever anything changes.
+  // If the remote blob was modified elsewhere since we last saved, it is pulled
+  // and merged (per-item, newest updatedAt wins) so no work is silently lost.
   const saveTimer = useRef(null);
   useEffect(() => {
     if (!isCloudData || !cloudSynced || !userId) return;
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
+    saveTimer.current = setTimeout(async () => {
       const snapshot = stateRef.current;
-      saveWorkspace(userId, {
-        version: 1,
-        projects: snapshot.projects,
-        tasks: snapshot.tasks,
-        documents: snapshot.documents,
-        categories: snapshot.categories,
-        activity: snapshot.activity,
-        team: snapshot.teamMembers,
-        dailyReports: snapshot.dailyReports,
-      }).catch((e) => {
+      try {
+        const result = await saveWorkspaceSafely(userId, {
+          version: 1,
+          projects: snapshot.projects,
+          tasks: snapshot.tasks,
+          documents: snapshot.documents,
+          categories: snapshot.categories,
+          activity: snapshot.activity,
+          team: snapshot.teamMembers,
+          dailyReports: snapshot.dailyReports,
+          deleted: snapshot.deleted,
+        }, lastSavedUpdatedAt.current);
+        lastSavedUpdatedAt.current = result.updatedAt;
+        if (result.merged) {
+          setProjects(result.merged.projects);
+          setTasks(result.merged.tasks);
+          setDocuments(result.merged.documents);
+          setCategories(result.merged.categories);
+          setActivity(result.merged.activity);
+          setTeamMembers(result.merged.team);
+          setDailyReports(result.merged.dailyReports);
+          deletedRef.current = result.merged.deleted || [];
+        }
+      } catch (e) {
         console.error('Cloud save failed:', e);
         showToast('Gagal sinkron ke cloud. Perubahan disimpan lokal.', 'error');
-      });
+      }
     }, 1500);
     return () => clearTimeout(saveTimer.current);
   }, [projects, tasks, documents, categories, activity, teamMembers, dailyReports, cloudSynced, userId, showToast]);
@@ -200,8 +221,8 @@ function NavigationWrapper() {
     localStorage.setItem('eng_daily_reports', JSON.stringify(dailyReports));
   }, [dailyReports]);
 
-  const logActivity = (action, detail) => {
-    setActivity((previous) => [{ id: crypto.randomUUID(), projectId: activeProjectId, action, detail, timestamp: new Date().toISOString() }, ...previous].slice(0, 50));
+  const logActivity = (action, detail, projectId = activeProjectId) => {
+    setActivity((previous) => [{ id: crypto.randomUUID(), projectId, action, detail, timestamp: new Date().toISOString() }, ...previous].slice(0, 50));
   };
 
   // Compute projects dynamically with dynamic progress and task counts
@@ -232,22 +253,30 @@ function NavigationWrapper() {
 
   const handleSaveProject = (projectData) => {
     const isEditing = projects.some((p) => p.id === projectData.id);
+    const data = { ...projectData, updatedAt: new Date().toISOString() };
     setProjects((prev) => {
-      const exists = prev.some((p) => p.id === projectData.id);
+      const exists = prev.some((p) => p.id === data.id);
       if (exists) {
-        return prev.map((p) => (p.id === projectData.id ? projectData : p));
+        return prev.map((p) => (p.id === data.id ? data : p));
       }
-      return [...prev, projectData];
+      return [...prev, data];
     });
-    if (!categories[projectData.id]) {
-      setCategories((prev) => ({ ...prev, [projectData.id]: initialCategories }));
+    if (!categories[data.id]) {
+      setCategories((prev) => ({ ...prev, [data.id]: initialCategories }));
     }
-    logActivity(isEditing ? 'Updated project' : 'Created project', projectData.name);
+    logActivity(isEditing ? 'Updated project' : 'Created project', data.name, data.id);
     showToast('Project saved successfully.');
   };
 
   const handleDeleteProject = (projectId) => {
     const project = projects.find((p) => p.id === projectId);
+    const ts = new Date().toISOString();
+    deletedRef.current = [
+      ...deletedRef.current,
+      { type: 'project', id: projectId, ts },
+      ...tasks.filter((t) => t.projectId === projectId).map((t) => ({ type: 'task', id: t.id, ts })),
+      ...documents.filter((d) => d.projectId === projectId).map((d) => ({ type: 'document', id: d.id, ts })),
+    ].slice(-500);
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
     setTasks((prev) => prev.filter((t) => t.projectId !== projectId));
     setDocuments((prev) => prev.filter((d) => d.projectId !== projectId));
@@ -269,32 +298,40 @@ function NavigationWrapper() {
 
   const activeProject = computedProjects.find((p) => p.id === activeProjectId);
 
-  // Redirect logic if no active project
+  // Redirect logic if no active project, or if the active project no longer
+  // exists (e.g. it was deleted on another device while its id was still
+  // cached locally). Falling back to the portal avoids crashes on /dashboard.
   useEffect(() => {
-    if (!activeProjectId && location.pathname !== '/') {
+    const projectExists = projects.some((p) => p.id === activeProjectId);
+    if (activeProjectId && !projectExists) {
+      setActiveProjectId('');
+      localStorage.removeItem('activeProjectId');
+    } else if (!activeProjectId && location.pathname !== '/') {
       navigate('/');
     } else if (activeProjectId && location.pathname === '/') {
       navigate('/dashboard');
     }
-  }, [activeProjectId, location.pathname, navigate]);
+  }, [activeProjectId, projects, location.pathname, navigate]);
 
   // Task Actions
   const handleSaveTask = (newTask) => {
     const isEditing = tasks.some((t) => t.id === newTask.id);
+    const data = { ...newTask, updatedAt: new Date().toISOString() };
     setTasks((prev) => {
-      const exists = prev.some((t) => t.id === newTask.id);
+      const exists = prev.some((t) => t.id === data.id);
       if (exists) {
-        return prev.map((t) => (t.id === newTask.id ? newTask : t));
+        return prev.map((t) => (t.id === data.id ? data : t));
       } else {
-        return [...prev, newTask];
+        return [...prev, data];
       }
     });
-    logActivity(isEditing ? 'Updated task' : 'Created task', newTask.task);
+    logActivity(isEditing ? 'Updated task' : 'Created task', data.task);
     showToast('Task saved successfully.');
   };
 
   const handleDeleteTask = (taskId) => {
     const task = tasks.find((item) => item.id === taskId);
+    deletedRef.current = [...deletedRef.current, { type: 'task', id: taskId, ts: new Date().toISOString() }].slice(-500);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     logActivity('Deleted task', task?.task || taskId);
     showToast('Task deleted.', 'info');
@@ -302,19 +339,22 @@ function NavigationWrapper() {
 
   // Document CRUD Actions
   const handleAddDocument = (newDoc) => {
-    setDocuments((prev) => [...prev, newDoc]);
-    logActivity('Added document', newDoc.name);
+    const data = { ...newDoc, updatedAt: new Date().toISOString() };
+    setDocuments((prev) => [...prev, data]);
+    logActivity('Added document', data.name);
     showToast('Document uploaded successfully.');
   };
 
   const handleEditDocument = (updatedDoc) => {
-    setDocuments((prev) => prev.map((document) => (document.id === updatedDoc.id ? updatedDoc : document)));
-    logActivity('Updated document', updatedDoc.name);
+    const data = { ...updatedDoc, updatedAt: new Date().toISOString() };
+    setDocuments((prev) => prev.map((document) => (document.id === data.id ? data : document)));
+    logActivity('Updated document', data.name);
     showToast('Document updated successfully.');
   };
 
   const handleDeleteDocument = (doc) => {
     deleteDocumentFile(doc);
+    deletedRef.current = [...deletedRef.current, { type: 'document', id: doc.id, ts: new Date().toISOString() }].slice(-500);
     setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     logActivity('Deleted document', doc.name);
     showToast('Document deleted.', 'info');
@@ -323,19 +363,21 @@ function NavigationWrapper() {
   // Team Member CRUD Actions
   const handleSaveMember = (memberData) => {
     const isEditing = teamMembers.some((m) => m.id === memberData.id);
+    const data = { ...memberData, updatedAt: new Date().toISOString() };
     setTeamMembers((prev) => {
-      const exists = prev.some((m) => m.id === memberData.id);
+      const exists = prev.some((m) => m.id === data.id);
       if (exists) {
-        return prev.map((m) => (m.id === memberData.id ? memberData : m));
+        return prev.map((m) => (m.id === data.id ? data : m));
       }
-      return [...prev, memberData];
+      return [...prev, data];
     });
-    logActivity(isEditing ? 'Updated team member' : 'Added team member', memberData.name);
+    logActivity(isEditing ? 'Updated team member' : 'Added team member', data.name);
     showToast('Team member saved successfully.');
   };
 
   const handleDeleteMember = (memberId) => {
     const member = teamMembers.find((m) => m.id === memberId);
+    deletedRef.current = [...deletedRef.current, { type: 'member', id: memberId, ts: new Date().toISOString() }].slice(-500);
     setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
     logActivity('Removed team member', member?.name || memberId);
     showToast('Team member removed.', 'info');
@@ -343,14 +385,16 @@ function NavigationWrapper() {
 
   const projectDailyReports = dailyReports[activeProjectId] || [];
   const handleSaveDailyReport = (entry) => {
+    const data = { ...entry, updatedAt: new Date().toISOString() };
     setDailyReports((prev) => {
-      const list = [...(prev[activeProjectId] || []).filter((e) => e.dateVal !== entry.dateVal), entry];
+      const list = [...(prev[activeProjectId] || []).filter((e) => e.dateVal !== data.dateVal), data];
       return { ...prev, [activeProjectId]: list };
     });
-    logActivity('Saved daily report', `${entry.name} · ${entry.dateVal}`);
+    logActivity('Saved daily report', `${data.name} · ${data.dateVal}`);
   };
 
   const handleDeleteDailyReport = (dateVal) => {
+    deletedRef.current = [...deletedRef.current, { type: 'daily', id: `${activeProjectId}:${dateVal}`, ts: new Date().toISOString() }].slice(-500);
     setDailyReports((prev) => ({
       ...prev,
       [activeProjectId]: (prev[activeProjectId] || []).filter((e) => e.dateVal !== dateVal),
@@ -368,20 +412,22 @@ function NavigationWrapper() {
 
   const handleEditCategory = (oldName, newName) => {
     if (activeCategories.includes(newName)) return showToast('Category name already exists.', 'error');
+    const ts = new Date().toISOString();
     setCategories((prev) => ({ ...prev, [activeProjectId]: activeCategories.map((category) => category === oldName ? newName : category) }));
-    setDocuments((prev) => prev.map((document) => document.projectId === activeProjectId && document.category === oldName ? { ...document, category: newName } : document));
+    setDocuments((prev) => prev.map((document) => document.projectId === activeProjectId && document.category === oldName ? { ...document, category: newName, updatedAt: ts } : document));
     showToast('Category updated successfully.');
   };
 
   const handleDeleteCategory = (name) => {
     const next = activeCategories.filter((category) => category !== name);
     const nextCategories = next.includes('General Spec') ? next : [...next, 'General Spec'];
+    const ts = new Date().toISOString();
     setCategories((prev) => ({ ...prev, [activeProjectId]: nextCategories }));
-    setDocuments((prev) => prev.map((document) => document.projectId === activeProjectId && document.category === name ? { ...document, category: 'General Spec' } : document));
+    setDocuments((prev) => prev.map((document) => document.projectId === activeProjectId && document.category === name ? { ...document, category: 'General Spec', updatedAt: ts } : document));
     showToast(`Category "${name}" deleted. Documents moved to General Spec.`, 'info');
   };
 
-  if (!activeProjectId) {
+  if (!activeProject) {
     return (
       <Routes>
         <Route
@@ -464,7 +510,7 @@ function NavigationWrapper() {
           />
           <Route path="/team" element={<TeamPage projectTasks={isolatedTasks} teamMembers={teamMembers} canManage={can('team.manage')} onSaveMember={handleSaveMember} onDeleteMember={handleDeleteMember} />} />
           <Route path="/reports" element={<ReportsPage projects={activeProject ? [activeProject] : []} tasks={isolatedTasks} documents={isolatedDocs} activity={activity.filter((item) => item.projectId === activeProjectId)} />} />
-          <Route path="/activity" element={<JobActivityReportPage activity={activity.filter((item) => item.projectId === activeProjectId)} activeProject={activeProject} dailyReports={projectDailyReports} onSaveDailyReport={handleSaveDailyReport} onDeleteDailyReport={handleDeleteDailyReport} />} />
+          <Route path="/activity" element={user?.role === 'viewer' ? <Navigate to="/dashboard" replace /> : <JobActivityReportPage activity={activity.filter((item) => item.projectId === activeProjectId)} activeProject={activeProject} dailyReports={projectDailyReports} onSaveDailyReport={handleSaveDailyReport} onDeleteDailyReport={handleDeleteDailyReport} />} />
           <Route path="/messages" element={<Navigate to="/activity" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
-  const canSignUp = !isCloudStorage;
+  const canSignUp = isCloudStorage;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,12 +27,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === 'signin') {
-        const ok = await login(email, password);
-        if (ok) {
+        const result = await login(email, password);
+        if (result.ok) {
           showToast('Welcome back.');
           navigate('/');
         } else {
-          setError('Invalid email or password.');
+          setError(result.error || 'Invalid email or password.');
         }
       } else {
         if (password.length < 6) {

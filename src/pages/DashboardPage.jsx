@@ -39,6 +39,7 @@ export default function DashboardPage({ activeProject, tasks = [], activity = []
       trend: -8,
       vs: 'vs last week',
       color: 'violet',
+      invert: true,
     },
     {
       title: 'Deadline Reminders',
@@ -46,6 +47,7 @@ export default function DashboardPage({ activeProject, tasks = [], activity = []
       trend: overdueCount > 0 ? +20 : -100,
       vs: overdueCount ? `${overdueCount} overdue` : 'next 7 days',
       color: 'amber',
+      invert: true,
     },
   ];
 

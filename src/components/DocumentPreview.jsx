@@ -5,19 +5,27 @@ import { getDocumentUrl, getDocumentDownloadUrl } from '../lib/docStorage';
 export default function DocumentPreview({ documentItem, onClose, onDownload }) {
   const [url, setUrl] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     if (!documentItem) {
       setUrl('');
       setDownloadUrl('');
+      setLoading(false);
       return undefined;
     }
     setUrl('');
     setDownloadUrl('');
-    getDocumentUrl(documentItem).then((u) => {
-      if (!cancelled) setUrl(u);
-    });
+    setLoading(true);
+    getDocumentUrl(documentItem)
+      .then((u) => {
+        if (!cancelled) setUrl(u);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     getDocumentDownloadUrl(documentItem).then((u) => {
       if (!cancelled) setDownloadUrl(u);
     });
@@ -39,6 +47,9 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
             {downloadUrl ? (
               <a
                 href={downloadUrl}
+                download={documentItem.name}
+                target="_blank"
+                rel="noreferrer"
                 className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -63,10 +74,16 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
           </div>
         </div>
         <div className="flex-1 h-[75vh] bg-slate-100 dark:bg-slate-900">
-          {url ? (
+          {loading ? (
+            <p className="p-8 text-center text-slate-500">Loading preview...</p>
+          ) : url ? (
             <iframe src={url} title={documentItem.name} className="w-full h-full" />
           ) : (
-            <p className="p-8 text-center text-slate-500">Loading preview...</p>
+            <div className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center">
+              <p className="text-[13px] text-slate-500">
+                Preview not available for this document. Use the Download button above.
+              </p>
+            </div>
           )}
         </div>
       </div>
