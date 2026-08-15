@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isCloudStorage } from '../lib/supabase';
-import { USERS, ROLE_PERMISSIONS } from '../auth';
+import { ROLE_PERMISSIONS } from '../auth';
 import { AuthContext } from './contexts';
 
 const STORAGE_KEY = 'eng_user';
@@ -8,11 +8,6 @@ const DATA_KEYS = ['eng_projects', 'eng_tasks', 'eng_documents', 'eng_categories
 
 function clearWorkspaceCache() {
   DATA_KEYS.forEach(key => localStorage.removeItem(key));
-}
-
-function toSafeUser(legacyUser) {
-  const { password: _ignored, ...safeUser } = legacyUser;
-  return safeUser;
 }
 
 export function AuthProvider({ children }) {
@@ -44,15 +39,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!isCloudStorage) {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        const restored = saved ? JSON.parse(saved) : null;
-        if (restored && USERS.some((u) => u.email.toLowerCase() === (restored.email || '').toLowerCase())) {
-          setUser(restored);
-        }
-      } catch {
-        setUser(null);
-      }
+      // Legacy client-side login is disabled for security (no hardcoded
+      // credentials shipped in the bundle). Cloud storage is required.
+      setUser(null);
       setReady(true);
       return;
     }
@@ -92,10 +81,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     if (!isCloudStorage) {
-      const match = USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-      if (!match || match.password !== password) return { ok: false, error: 'Invalid email or password.' };
-      setUser(toSafeUser(match));
-      return { ok: true };
+      return { ok: false, error: 'Secure sign-in requires Supabase cloud to be configured.' };
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { ok: false, error: error.message || 'Invalid email or password.' };

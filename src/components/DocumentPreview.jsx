@@ -97,7 +97,7 @@ export default function DocumentPreview({ documentItem, onClose, onDownload }) {
           {loading ? (
             <p className="p-8 text-center text-slate-500">Loading preview...</p>
           ) : url ? (
-            <iframe src={url} title={documentItem.name} className="w-full h-full" />
+            <iframe src={url} title={documentItem.name} sandbox="allow-scripts" className="w-full h-full" />
           ) : (
             <div className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center">
               <p className="text-[13px] text-slate-500">

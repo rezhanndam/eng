@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Zap, Lock, Mail, LogIn, UserPlus, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { USERS, ROLE_LABELS } from '../auth';
 import { isCloudStorage } from '../lib/supabase';
 import { BRAND } from '../data';
 
@@ -52,12 +51,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = async (account) => {
-    await login(account.email, account.password);
-    showToast(`Signed in as ${account.name}.`);
-    navigate('/');
   };
 
   const switchMode = (next) => {
@@ -171,27 +164,6 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
-
-        {!isCloudStorage && (
-          <div className="mt-6">
-            <p className="text-center text-[12px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Demo Accounts</p>
-            <div className="grid grid-cols-3 gap-3">
-              {USERS.map((account) => (
-                <button
-                  key={account.email}
-                  onClick={() => handleQuickLogin(account)}
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all cursor-pointer group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-[11px] font-bold mx-auto mb-2 group-hover:scale-105 transition-transform">
-                    {account.avatar}
-                  </div>
-                  <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate">{account.role}</p>
-                  <p className="text-[10.5px] text-slate-400 dark:text-slate-500 truncate">{ROLE_LABELS[account.role]}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
