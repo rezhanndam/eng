@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Pencil } from 'lucide-react';
 import { TEAM_MEMBERS } from '../data';
-import { isValidDisplayDate } from '../utils/dates';
+import { isValidDisplayDate, displayDateToInput, inputToDisplay } from '../utils/dates';
 import TeamModal from './TeamModal';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
@@ -26,28 +26,42 @@ export default function ProjectModal({
   const [name, setName] = useState('');
   const [status, setStatus] = useState('Planning');
   const [deadline, setDeadline] = useState('');
+  const [deadlineInput, setDeadlineInput] = useState('');
   const [lead, setLead] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [deadlineError, setDeadlineError] = useState('');
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
 
+  // Initialize fields only when the modal opens (or the edited project changes).
+  // teamMembers is intentionally NOT a dependency: adding/editing a member from
+  // inside this modal changes its reference and would otherwise wipe the form.
+  const wasOpen = useRef(false);
+  const teamRef = useRef(teamMembers);
+  teamRef.current = teamMembers;
   useEffect(() => {
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+    setDeadlineError('');
     if (project) {
       setName(project.name);
       setStatus(project.status || 'Planning');
       setDeadline(project.deadline || '');
-      setLead(project.lead || teamMembers[0]?.name || TEAM_MEMBERS[0]?.name || '');
+      setDeadlineInput(displayDateToInput(project.deadline || ''));
+      setLead(project.lead || teamRef.current[0]?.name || TEAM_MEMBERS[0]?.name || '');
       setColor(project.color || COLORS[0]);
-    } else {
+    } else if (!wasOpen.current) {
       setName('');
       setStatus('Planning');
       setDeadline('');
-      setLead(teamMembers[0]?.name || TEAM_MEMBERS[0]?.name || '');
+      setDeadlineInput('');
+      setLead(teamRef.current[0]?.name || TEAM_MEMBERS[0]?.name || '');
       setColor(COLORS[0]);
     }
-    setDeadlineError('');
-  }, [project, isOpen, teamMembers]);
+    wasOpen.current = true;
+  }, [isOpen, project]);
 
   if (!isOpen) return null;
 
@@ -146,14 +160,14 @@ export default function ProjectModal({
                 Deadline
               </label>
               <input
-                type="text"
-                value={deadline}
+                type="date"
+                value={deadlineInput}
                 onChange={(e) => {
-                  setDeadline(e.target.value);
+                  setDeadlineInput(e.target.value);
+                  setDeadline(e.target.value ? inputToDisplay(e.target.value) : '');
                   if (deadlineError) setDeadlineError('');
                 }}
-                placeholder="e.g. 30 Sep 2026"
-                className={`w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border rounded-xl outline-none focus:ring-2 transition-all ${deadlineError ? 'border-red-400 focus:border-red-400 focus:ring-red-100 dark:focus:ring-red-900/50' : 'border-slate-200 dark:border-slate-600 focus:border-blue-400 focus:ring-blue-100'}`}
+                className={`w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border rounded-xl outline-none focus:ring-2 transition-all cursor-pointer ${deadlineError ? 'border-red-400 focus:border-red-400 focus:ring-red-100 dark:focus:ring-red-900/50' : 'border-slate-200 dark:border-slate-600 focus:border-blue-400 focus:ring-blue-100'}`}
                 required
               />
               {deadlineError && (

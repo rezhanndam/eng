@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { isValidDisplayDate } from '../utils/dates';
+import { isValidDisplayDate, displayDateToInput, inputToDisplay } from '../utils/dates';
 
 const generateTaskId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -15,24 +15,39 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
   const [priority, setPriority] = useState('Medium');
   const [status, setStatus] = useState('Pending');
   const [deadline, setDeadline] = useState('');
+  const [deadlineInput, setDeadlineInput] = useState('');
   const [deadlineError, setDeadlineError] = useState('');
 
+  // Initialize fields only when the modal opens (or the edited task changes).
+  // teamMembers is intentionally NOT a dependency: a cloud sync merge can give
+  // it a new reference while the user is typing, which would otherwise wipe
+  // the in-progress form.
+  const wasOpen = useRef(false);
+  const teamRef = useRef(teamMembers);
+  teamRef.current = teamMembers;
   useEffect(() => {
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+    setDeadlineError('');
     if (task) {
       setTaskName(task.task);
       setAssignee(task.assignee);
       setPriority(task.priority);
       setStatus(task.status);
       setDeadline(task.deadline);
-    } else {
+      setDeadlineInput(displayDateToInput(task.deadline));
+    } else if (!wasOpen.current) {
       setTaskName('');
-      setAssignee(teamMembers[0]?.name || '');
+      setAssignee(teamRef.current[0]?.name || '');
       setPriority('Medium');
       setStatus('Pending');
       setDeadline('');
+      setDeadlineInput('');
     }
-    setDeadlineError('');
-  }, [task, isOpen, teamMembers]);
+    wasOpen.current = true;
+  }, [isOpen, task]);
 
   if (!isOpen) return null;
 
@@ -150,14 +165,14 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
               Deadline
             </label>
             <input
-              type="text"
-              value={deadline}
+              type="date"
+              value={deadlineInput}
               onChange={(e) => {
-                setDeadline(e.target.value);
+                setDeadlineInput(e.target.value);
+                setDeadline(e.target.value ? inputToDisplay(e.target.value) : '');
                 if (deadlineError) setDeadlineError('');
               }}
-              placeholder="e.g. 24 Aug 2026"
-              className={`w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border rounded-xl outline-none focus:ring-2 transition-all ${deadlineError ? 'border-red-400 focus:border-red-400 focus:ring-red-100 dark:focus:ring-red-900/50' : 'border-slate-200 dark:border-slate-600 focus:border-blue-400 focus:ring-blue-100'}`}
+              className={`w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border rounded-xl outline-none focus:ring-2 transition-all cursor-pointer ${deadlineError ? 'border-red-400 focus:border-red-400 focus:ring-red-100 dark:focus:ring-red-900/50' : 'border-slate-200 dark:border-slate-600 focus:border-blue-400 focus:ring-blue-100'}`}
               required
             />
             {deadlineError && (
