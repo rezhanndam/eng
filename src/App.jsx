@@ -333,6 +333,17 @@ function NavigationWrapper() {
     const task = tasks.find((item) => item.id === taskId);
     deletedRef.current = [...deletedRef.current, { type: 'task', id: taskId, ts: new Date().toISOString() }].slice(-500);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
+
+    // Cascade: remove documents attached to this task so they do not linger
+    // as orphans in the Documents menu.
+    const attachedDocs = documents.filter((d) => task?.documentIds?.includes(d.id) || d.taskId === taskId);
+    if (attachedDocs.length) {
+      attachedDocs.forEach((doc) => deleteDocumentFile(doc));
+      const ts = new Date().toISOString();
+      deletedRef.current = [...deletedRef.current, ...attachedDocs.map((d) => ({ type: 'document', id: d.id, ts }))].slice(-500);
+      setDocuments((prev) => prev.filter((d) => !attachedDocs.some((ad) => ad.id === d.id)));
+    }
+
     logActivity('Deleted task', task?.task || taskId);
     showToast('Task deleted.', 'info');
   };
@@ -356,6 +367,14 @@ function NavigationWrapper() {
     deleteDocumentFile(doc);
     deletedRef.current = [...deletedRef.current, { type: 'document', id: doc.id, ts: new Date().toISOString() }].slice(-500);
     setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+    // Clean up the reference on the task it was attached to (if any).
+    if (doc.taskId) {
+      setTasks((prev) => prev.map((t) =>
+        t.id === doc.taskId && t.documentIds?.includes(doc.id)
+          ? { ...t, documentIds: t.documentIds.filter((id) => id !== doc.id), updatedAt: new Date().toISOString() }
+          : t
+      ));
+    }
     logActivity('Deleted document', doc.name);
     showToast('Document deleted.', 'info');
   };
@@ -488,6 +507,9 @@ function NavigationWrapper() {
                 can={can}
                 activeProject={activeProject}
                 teamMembers={teamMembers}
+                documents={documents}
+                categories={activeCategories}
+                onAddDocument={handleAddDocument}
               />
             }
           />

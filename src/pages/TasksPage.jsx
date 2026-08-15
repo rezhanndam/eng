@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import TaskModal from '../components/TaskModal';
 
-export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, activeProject, teamMembers = [] }) {
+export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, activeProject, teamMembers = [], documents = [], categories = [], onAddDocument }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
 
@@ -16,6 +16,8 @@ export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, active
     setSelectedTask(null);
     setIsTaskModalOpen(true);
   };
+
+  const selectedTaskDocs = selectedTask ? documents.filter((d) => selectedTask.documentIds?.includes(d.id)) : [];
 
   return (
     <div>
@@ -50,6 +52,9 @@ export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, active
         projectId={selectedTask ? selectedTask.projectId : activeProject?.id}
         projectName={selectedTask ? selectedTask.project : activeProject?.name}
         teamMembers={teamMembers}
+        taskDocuments={selectedTaskDocs}
+        categories={categories}
+        onAddDocument={onAddDocument}
       />
     </div>
   );

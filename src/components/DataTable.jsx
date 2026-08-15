@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, ChevronDown, Edit2, Trash2, ListChecks, ArrowUpDown } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronDown, Edit2, Trash2, ListChecks, ArrowUpDown, Paperclip } from 'lucide-react';
 import { TASK_COLUMNS } from '../data';
 import { daysUntil } from '../utils/dates';
 import EmptyState from './EmptyState';
@@ -134,7 +134,17 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
             return <tr key={task.id} className="border-b border-slate-50 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
               <td className="px-5 py-3.5"><input type="checkbox" checked={checkedRows.has(task.id)} onChange={() => toggleRow(task.id)} className="w-4 h-4 rounded border-slate-300 dark:border-slate-500 accent-blue-600 cursor-pointer" /></td>
               <td className="px-5 py-3.5 text-[13px] font-medium text-slate-700 dark:text-slate-200">{task.id}</td>
-              <td className="px-5 py-3.5 text-[13px] text-slate-700 dark:text-slate-200 font-medium">{task.task}</td>
+              <td className="px-5 py-3.5 text-[13px] text-slate-700 dark:text-slate-200 font-medium">
+                <span className="inline-flex items-center gap-1.5">
+                  {task.task}
+                  {task.documentIds?.length > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500" title="Attached documents">
+                      <Paperclip className="w-3 h-3" />
+                      {task.documentIds.length}
+                    </span>
+                  )}
+                </span>
+              </td>
               <td className="px-5 py-3.5 text-[13px] text-slate-500 dark:text-slate-400">{task.project}</td>
               <td className="px-5 py-3.5 text-[13px] text-slate-500 dark:text-slate-400">{task.assignee}</td>
               <td className="px-5 py-3.5"><span className={`inline-block px-2.5 py-1 rounded-full text-[12px] font-medium ${PRIORITY_STYLES[task.priority]}`}>{task.priority}</span></td>
