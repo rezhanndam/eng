@@ -514,6 +514,9 @@ function NavigationWrapper() {
   const activeCategories = (categories[activeProjectId]?.length ? categories[activeProjectId] : initialCategories);
   const handleAddCategory = (name) => {
     if (activeCategories.includes(name)) return showToast('Category already exists.', 'error');
+    // Mark this category as (re)added so a stale delete tombstone from another
+    // device does not filter it out during a cloud merge.
+    deletedRef.current = [...deletedRef.current, { type: 'category-revive', id: `${activeProjectId}:${name}`, ts: new Date().toISOString() }].slice(-500);
     setCategories((prev) => ({ ...prev, [activeProjectId]: [...activeCategories, name] }));
     showToast('Category added successfully.');
   };
@@ -521,6 +524,8 @@ function NavigationWrapper() {
   const handleEditCategory = (oldName, newName) => {
     if (activeCategories.includes(newName)) return showToast('Category name already exists.', 'error');
     const ts = new Date().toISOString();
+    // The renamed category is effectively re-added under the new name.
+    deletedRef.current = [...deletedRef.current, { type: 'category-revive', id: `${activeProjectId}:${newName}`, ts }].slice(-500);
     setCategories((prev) => ({ ...prev, [activeProjectId]: activeCategories.map((category) => category === oldName ? newName : category) }));
     setDocuments((prev) => prev.map((document) => document.projectId === activeProjectId && document.category === oldName ? { ...document, category: newName, updatedAt: ts } : document));
     showToast('Category updated successfully.');
@@ -530,6 +535,8 @@ function NavigationWrapper() {
     const next = activeCategories.filter((category) => category !== name);
     const nextCategories = next.includes('General Spec') ? next : [...next, 'General Spec'];
     const ts = new Date().toISOString();
+    // Track the deletion so the merge does not resurrect it from a stale copy.
+    deletedRef.current = [...deletedRef.current, { type: 'category', id: `${activeProjectId}:${name}`, ts }].slice(-500);
     setCategories((prev) => ({ ...prev, [activeProjectId]: nextCategories }));
     setDocuments((prev) => prev.map((document) => document.projectId === activeProjectId && document.category === name ? { ...document, category: 'General Spec', updatedAt: ts } : document));
     showToast(`Category "${name}" deleted. Documents moved to General Spec.`, 'info');

@@ -50,13 +50,23 @@ const mergeById = (localItems, remoteItems, key = 'id') => {
   return [...byKey.values()];
 };
 
-const mergeCategories = (local, remote) => {
+// Categories are merged per project as a union. A category that was deleted
+// locally must not be resurrected by a stale remote copy, so deletions are
+// tracked as tombstones and filtered out here. Re-adding/renaming records a
+// `category-revive` marker: the category stays if the revive is newer than
+// the delete tombstone (same ts-aware semantics used for items).
+const mergeCategories = (local, remote, tombMap = new Map()) => {
   const keys = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
   const merged = {};
   for (const key of keys) {
     const l = Array.isArray(local?.[key]) ? local[key] : [];
     const r = Array.isArray(remote?.[key]) ? remote[key] : [];
-    merged[key] = [...new Set([...l, ...r])];
+    merged[key] = [...new Set([...l, ...r])].filter((name) => {
+      const del = tombMap.get(`category:${key}:${name}`)?.ts;
+      if (!del) return true;
+      const revive = tombMap.get(`category-revive:${key}:${name}`)?.ts;
+      return Boolean(revive && revive > del);
+    });
   }
   return merged;
 };
@@ -131,7 +141,7 @@ export function mergeWorkspace(local, remote) {
     return !goneByProject && !isDeleted('document', d.id, d);
   });
   const team = mergeById(local?.team, remote?.team, 'id').filter((m) => !isDeleted('member', m.id, m));
-  const categories = mergeCategories(local?.categories, remote?.categories);
+  const categories = mergeCategories(local?.categories, remote?.categories, tombMap);
   for (const key of Object.keys(categories)) {
     if (tombMap.has(`project:${key}`)) delete categories[key];
   }
