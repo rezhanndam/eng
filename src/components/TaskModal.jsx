@@ -36,6 +36,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
   const [deadline, setDeadline] = useState('');
   const [deadlineInput, setDeadlineInput] = useState('');
   const [deadlineError, setDeadlineError] = useState('');
+  const [category, setCategory] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [fileError, setFileError] = useState('');
@@ -63,6 +64,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
       setStatus(task.status);
       setDeadline(task.deadline);
       setDeadlineInput(displayDateToInput(task.deadline));
+      setCategory(task.category || '');
     } else if (!wasOpen.current) {
       setTaskName('');
       setAssignee(teamRef.current[0]?.name || '');
@@ -70,6 +72,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
       setStatus('Pending');
       setDeadline('');
       setDeadlineInput('');
+      setCategory('');
     }
     wasOpen.current = true;
   }, [isOpen, task]);
@@ -128,7 +131,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
             id: pf.id,
             name: pf.name,
             type: pf.type,
-            category: categories[0] || 'General Spec',
+            category: category || categories[0] || 'General Spec',
             size: pf.size,
             date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
             projectId,
@@ -155,6 +158,7 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
       priority,
       status,
       deadline,
+      category,
       documentIds: [...(task?.documentIds || []), ...newDocIds],
     });
     onClose();
@@ -264,6 +268,24 @@ export default function TaskModal({ isOpen, onClose, onSave, task = null, projec
             {deadlineError && (
               <p className="mt-1.5 text-[12px] text-red-500 dark:text-red-400">{deadlineError}</p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+              Category <span className="normal-case font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
+            >
+              <option value="">No category</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
 
           {task && (

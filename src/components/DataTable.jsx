@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, ChevronDown, Edit2, Trash2, ListChecks, ArrowUpDown, Paperclip } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronDown, Edit2, Trash2, ListChecks, ArrowUpDown, Paperclip, Tags } from 'lucide-react';
 import { TASK_COLUMNS } from '../data';
 import { daysUntil } from '../utils/dates';
 import EmptyState from './EmptyState';
@@ -37,12 +37,15 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [priority, setPriority] = useState('All Priorities');
+  const [category, setCategory] = useState('All Categories');
   const [sortBy, setSortBy] = useState('deadline');
   const [pendingDelete, setPendingDelete] = useState(null);
 
+  const categoryOptions = [...new Set(tasks.map((task) => task.category).filter(Boolean))];
+
   useEffect(() => {
     setCheckedRows(new Set());
-  }, [query, status, priority, tasks]);
+  }, [query, status, priority, category, tasks]);
 
   const filteredTasks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -57,7 +60,8 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
           .some((value) => value?.toLowerCase().includes(normalizedQuery));
         return matchesQuery
           && (status === 'All Statuses' || task.status === status)
-          && (priority === 'All Priorities' || task.priority === priority);
+          && (priority === 'All Priorities' || task.priority === priority)
+          && (category === 'All Categories' || task.category === category);
       })
       .sort((a, b) => {
         if (sortBy === 'priority') {
@@ -67,7 +71,7 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
         if (sortBy === 'task') return a.task.localeCompare(b.task);
         return getDeadlineTime(a.deadline) - getDeadlineTime(b.deadline);
       });
-  }, [tasks, query, status, priority, sortBy]);
+  }, [tasks, query, status, priority, category, sortBy]);
 
   const toggleRow = (id) => {
     setCheckedRows((previous) => {
@@ -88,12 +92,13 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
     setQuery('');
     setStatus('All Statuses');
     setPriority('All Priorities');
+    setCategory('All Categories');
     setSortBy('deadline');
   };
 
   const showActions = Boolean(onEditTask || onDeleteTask);
   const columns = showActions ? [...TASK_COLUMNS, 'Actions'] : TASK_COLUMNS;
-  const hasFilters = query || status !== 'All Statuses' || priority !== 'All Priorities' || sortBy !== 'deadline';
+  const hasFilters = query || status !== 'All Statuses' || priority !== 'All Priorities' || category !== 'All Categories' || sortBy !== 'deadline';
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm mt-6">
@@ -119,6 +124,17 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
             </select>
             <SlidersHorizontal className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           </div>
+          {categoryOptions.length > 0 && (
+            <div className="relative">
+              <select value={category} onChange={(event) => setCategory(event.target.value)} className="appearance-none h-8 pl-3 pr-8 text-[12.5px] font-medium border border-slate-200 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 outline-none cursor-pointer">
+                <option>All Categories</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <Tags className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            </div>
+          )}
           <button onClick={() => setSortBy((current) => current === 'deadline' ? 'priority' : current === 'priority' ? 'task' : 'deadline')} className="flex items-center gap-1.5 h-8 px-3 text-[12.5px] font-medium border border-slate-200 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
             <ArrowUpDown className="w-3.5 h-3.5" /> Sort: {sortBy}
           </button>
@@ -144,6 +160,15 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
                     </span>
                   )}
                 </span>
+              </td>
+              <td className="px-5 py-3.5">
+                {task.category ? (
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    {task.category}
+                  </span>
+                ) : (
+                  <span className="text-[12px] text-slate-300 dark:text-slate-600">—</span>
+                )}
               </td>
               <td className="px-5 py-3.5 text-[13px] text-slate-500 dark:text-slate-400">{task.project}</td>
               <td className="px-5 py-3.5 text-[13px] text-slate-500 dark:text-slate-400">{task.assignee}</td>

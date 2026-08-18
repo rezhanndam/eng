@@ -160,7 +160,7 @@ export const TASKS = [
   { id: 'TSK-108', task: 'Bearing replacement plan', project: 'Turbine Overhaul Unit 3', projectId: 'proj-002', assignee: 'Michael Tan', priority: 'High', status: 'Pending', deadline: '25 Aug 2026' },
 ];
 
-export const TASK_COLUMNS = ['', 'ID', 'Task', 'Project', 'Assignee', 'Priority', 'Status', 'Deadline'];
+export const TASK_COLUMNS = ['', 'ID', 'Task', 'Category', 'Project', 'Assignee', 'Priority', 'Status', 'Deadline'];
 
 export const TEAM_MEMBERS = [
   { name: 'John Carter', role: 'Lead Engineer', avatar: 'JC', activeTasks: 4, color: 'from-blue-500 to-blue-600' },
