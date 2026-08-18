@@ -23,23 +23,35 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
   const [fileError, setFileError] = useState('');
   const fileInputRef = useRef(null);
 
+  // Initialize fields only when the modal opens (or the edited document
+  // changes). categories is intentionally NOT a dependency: a cloud sync merge
+  // can give it a new reference while the user is typing, which would
+  // otherwise wipe the in-progress form.
+  const wasOpen = useRef(false);
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
   useEffect(() => {
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+    setFileError('');
+    setFileObject(null);
     if (documentItem) {
       setName(documentItem.name);
       setType(documentItem.type);
-      setCategory(documentItem.category || (categories[0] || ''));
+      setCategory(documentItem.category || (categoriesRef.current[0] || ''));
       setFileData(documentItem.fileData || null);
       setFileSize(documentItem.size || '');
-    } else {
+    } else if (!wasOpen.current) {
       setName('');
       setType('PDF');
-      setCategory(categories[0] || '');
+      setCategory(categoriesRef.current[0] || '');
       setFileData(null);
       setFileSize('');
     }
-    setFileObject(null);
-    setFileError('');
-  }, [documentItem, isOpen, categories]);
+    wasOpen.current = true;
+  }, [isOpen, documentItem]);
 
   if (!isOpen) return null;
 
