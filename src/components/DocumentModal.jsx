@@ -68,14 +68,20 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
     }
     setFileError('');
 
-    // Detect Name & Type
-    setName(file.name);
-    
-    // Get file extension
+    // Detect Name (without extension), Type and Category from the file name.
     const dotIndex = file.name.lastIndexOf('.');
+    const baseName = dotIndex !== -1 ? file.name.slice(0, dotIndex) : file.name;
+    setName(baseName.trim());
+
     const ext = dotIndex !== -1 ? file.name.slice(dotIndex + 1).toUpperCase() : 'PDF';
     const validTypes = ['PDF', 'DWG', 'XLSX', 'ZIP', 'DOCX'];
     setType(validTypes.includes(ext) ? ext : 'PDF');
+
+    // Pick the category whose name appears in the file name; fall back to the
+    // first project category.
+    const lowerName = file.name.toLowerCase();
+    const matchedCategory = categoriesRef.current.find((c) => lowerName.includes(c.toLowerCase()));
+    setCategory(matchedCategory || categoriesRef.current[0] || '');
 
     // Calculate dynamic size
     const sizeInMB = file.size / (1024 * 1024);
