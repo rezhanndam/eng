@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Upload, AlertTriangle, Loader2 } from 'lucide-react';
 import { isCloudStorage } from '../lib/supabase';
-import { uploadDocumentFile } from '../lib/docStorage';
+import { uploadDocumentFile, deleteDocumentFile } from '../lib/docStorage';
 
 const MAX_FILE_SIZE = isCloudStorage ? 25 * 1024 * 1024 : 3 * 1024 * 1024;
 
@@ -137,9 +137,36 @@ export default function DocumentModal({ isOpen, onClose, onSave, documentItem = 
     if (isCloudStorage) {
       if (fileObject) {
         payload.filePath = filePath;
+        payload.fileVersion = (documentItem?.fileVersion || 1) + 1;
       }
     } else {
-      if (fileData) payload.fileData = fileData;
+      if (fileData) {
+        payload.fileData = fileData;
+        payload.fileVersion = (documentItem?.fileVersion || 1) + 1;
+      }
+    }
+
+    // When a replacement file is uploaded, the previous file is kept as a
+    // version. At most 5 stored files per document: the current one plus 4
+    // older versions. Overflowing versions are removed from storage.
+    if (fileObject || fileData) {
+      const previousFile = isCloudStorage ? documentItem?.filePath : documentItem?.fileData;
+      if (documentItem && previousFile) {
+        const version = {
+          n: documentItem.fileVersion || 1,
+          size: documentItem.size,
+          date: documentItem.date,
+          ...(isCloudStorage ? { filePath: previousFile } : { fileData: previousFile }),
+        };
+        const next = [...(documentItem.versions || []), version];
+        const overflow = next.length - 4;
+        if (overflow > 0) {
+          next.slice(0, overflow).forEach((v) => v.filePath && deleteDocumentFile(v));
+          payload.versions = next.slice(overflow);
+        } else {
+          payload.versions = next;
+        }
+      }
     }
 
     onSave(payload);

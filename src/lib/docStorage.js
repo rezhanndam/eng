@@ -35,6 +35,16 @@ export async function deleteDocumentFile(doc) {
   if (error) console.error('Supabase delete failed:', error.message);
 }
 
+// Removes the current file and every stored version, used when a document is
+// permanently deleted or the trash is emptied.
+export async function deleteDocumentFiles(doc) {
+  if (!isCloudStorage) return;
+  const paths = [doc?.filePath, ...(doc?.versions || []).map((v) => v?.filePath)].filter(Boolean);
+  if (!paths.length) return;
+  const { error } = await supabase.storage.from(BUCKET).remove(paths);
+  if (error) console.error('Supabase delete failed:', error.message);
+}
+
 // The bucket is private: files can only be read via short-lived signed URLs,
 // generated server-side for the authenticated owner only.
 export async function getDocumentUrl(doc) {

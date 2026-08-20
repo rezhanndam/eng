@@ -143,7 +143,7 @@ export default function JobActivityReportPage({ activity = [], activeProject, da
                             {item.detail ? <span className="text-slate-500 dark:text-slate-400"> · {item.detail}</span> : null}
                           </p>
                           <time className="text-[11px] text-slate-400 dark:text-slate-500">
-                            {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {item.user ? `${item.user} · ` : ''}{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </time>
                         </div>
                       </div>

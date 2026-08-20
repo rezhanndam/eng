@@ -8,7 +8,7 @@ import { useToast } from './hooks/useToast';
 import { useAuth } from './hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
-import { deleteDocumentFile } from './lib/docStorage';
+import { deleteDocumentFiles } from './lib/docStorage';
 import { isCloudData, loadWorkspace, saveWorkspaceSafely } from './lib/cloudData';
 
 const ProjectPortalPage = lazy(() => import('./pages/ProjectPortalPage'));
@@ -235,7 +235,7 @@ function NavigationWrapper() {
   }, [trash]);
 
   const logActivity = (action, detail, projectId = activeProjectId) => {
-    setActivity((previous) => [{ id: crypto.randomUUID(), projectId, action, detail, timestamp: new Date().toISOString() }, ...previous].slice(0, 50));
+    setActivity((previous) => [{ id: crypto.randomUUID(), projectId, action, detail, user: user?.name || '', timestamp: new Date().toISOString() }, ...previous].slice(0, 50));
   };
 
   // Compute projects dynamically with dynamic progress and task counts
@@ -387,6 +387,13 @@ function NavigationWrapper() {
     showToast('Document updated successfully.');
   };
 
+  const handleRestoreDocumentVersion = (doc) => {
+    const data = { ...doc, updatedAt: new Date().toISOString() };
+    setDocuments((prev) => prev.map((document) => (document.id === data.id ? data : document)));
+    logActivity('Restored document version', data.name);
+    showToast('Document version restored.');
+  };
+
   const handleDeleteDocument = (doc) => {
     // File is kept in storage so the document can be restored from trash.
     const ts = new Date().toISOString();
@@ -494,8 +501,8 @@ function NavigationWrapper() {
       ? trash.filter((e) => e.type === 'document' && e.item?.projectId === entry.id)
       : [];
     const removeKeys = new Set([`${entry.type}:${entry.id}`, ...related.map((r) => `document:${r.id}`)]);
-    if (entry.type === 'document' && entry.item?.filePath) deleteDocumentFile(entry.item);
-    related.forEach((r) => r.item?.filePath && deleteDocumentFile(r.item));
+    if (entry.type === 'document' && entry.item?.filePath) deleteDocumentFiles(entry.item);
+    related.forEach((r) => r.item?.filePath && deleteDocumentFiles(r.item));
     setTrash((prev) => prev.filter((e) => !removeKeys.has(`${e.type}:${e.id}`)));
     logActivity('Permanently deleted', entry.item?.name || entry.item?.task || entry.id);
     showToast('Item permanently deleted.', 'info');
@@ -503,7 +510,7 @@ function NavigationWrapper() {
 
   const emptyTrash = () => {
     trash.forEach((e) => {
-      if (e.type === 'document' && e.item?.filePath) deleteDocumentFile(e.item);
+      if (e.type === 'document' && e.item?.filePath) deleteDocumentFiles(e.item);
     });
     setTrash([]);
     logActivity('Emptied trash', 'All deleted items were permanently removed');
@@ -586,6 +593,9 @@ function NavigationWrapper() {
                 activeProject={activeProject}
                 tasks={tasks}
                 activity={activity}
+                documents={isolatedDocs}
+                projects={computedProjects}
+                onSelectProject={handleSelectProject}
                 onSwitchProject={handleSwitchProject}
               />
             }
@@ -618,6 +628,7 @@ function NavigationWrapper() {
                 onAddDocument={handleAddDocument}
                 onEditDocument={handleEditDocument}
                 onDeleteDocument={handleDeleteDocument}
+                onRestoreVersion={handleRestoreDocumentVersion}
                 onAddCategory={handleAddCategory}
                 onEditCategory={handleEditCategory}
                 onDeleteCategory={handleDeleteCategory}

@@ -5,6 +5,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { daysUntil } from '../utils/dates';
+import GlobalSearch from './GlobalSearch';
 
 const HELP_TIPS = [
   ['Dashboard', 'Overview, KPIs and deadline reminders.'],
@@ -21,7 +22,7 @@ const dayLabel = (days) => {
   return `In ${days} day${days === 1 ? '' : 's'}`;
 };
 
-export default function TopHeader({ activeProject, tasks = [], reminders = 0, activity = [], onSwitchProject }) {
+export default function TopHeader({ activeProject, tasks = [], reminders = 0, activity = [], documents = [], projects = [], onSelectProject, onSwitchProject }) {
   const { isDark, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const { user, logout } = useAuth();
@@ -80,6 +81,8 @@ export default function TopHeader({ activeProject, tasks = [], reminders = 0, ac
     <div className="mb-8">
       <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <h2 className="text-[15px] font-semibold text-slate-800 dark:text-slate-200">Dashboard</h2>
+
+        <GlobalSearch projects={projects} tasks={tasks} documents={documents} onSelectProject={onSelectProject} />
 
         <div ref={containerRef} className="flex items-center gap-2.5 flex-wrap">
           <button
@@ -159,7 +162,7 @@ export default function TopHeader({ activeProject, tasks = [], reminders = 0, ac
                   {activity.length ? activity.slice(0, 5).map((item) => (
                     <div key={item.id} className="px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                       <p className="text-[12px] text-slate-600 dark:text-slate-300"><strong className="text-slate-800 dark:text-slate-100">{item.action}</strong> · {item.detail}</p>
-                      <p className="text-[10.5px] text-slate-400 dark:text-slate-500 mt-0.5">{new Date(item.timestamp).toLocaleString()}</p>
+                      <p className="text-[10.5px] text-slate-400 dark:text-slate-500 mt-0.5">{item.user ? `${item.user} · ` : ''}{new Date(item.timestamp).toLocaleString()}</p>
                     </div>
                   )) : (
                     <p className="px-4 py-4 text-center text-[12px] text-slate-400 dark:text-slate-500">No recent activity yet.</p>

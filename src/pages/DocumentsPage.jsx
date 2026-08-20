@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { FileText, Download, Trash, Upload, Search, Folder, ChevronRight, Plus, Edit, Trash2, FolderOpen, Eye } from 'lucide-react';
+import { FileText, Download, Trash, Upload, Search, Folder, ChevronRight, Plus, Edit, Trash2, FolderOpen, Eye, History } from 'lucide-react';
 import CategoryModal from '../components/CategoryModal';
 import DocumentModal from '../components/DocumentModal';
 import DocumentPreview from '../components/DocumentPreview';
+import VersionHistoryModal from '../components/VersionHistoryModal';
 import EmptyState from '../components/EmptyState';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../hooks/useToast';
-import { getDocumentDownloadUrl, deleteDocumentFile } from '../lib/docStorage';
+import { getDocumentDownloadUrl } from '../lib/docStorage';
 
 const TYPE_ICONS = {
   PDF: 'bg-red-50 text-red-500',
@@ -20,6 +21,7 @@ export default function DocumentsPage({
   onAddDocument,
   onEditDocument,
   onDeleteDocument,
+  onRestoreVersion,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
@@ -45,6 +47,9 @@ export default function DocumentsPage({
   // Preview State
   const [previewDoc, setPreviewDoc] = useState(null);
 
+  // Version history state
+  const [historyDoc, setHistoryDoc] = useState(null);
+
   // Filter documents by search and active category
   const filteredDocs = documents.filter((doc) => {
     const matchesCategory = activeCategory === null || doc.category === activeCategory;
@@ -62,13 +67,39 @@ export default function DocumentsPage({
 
   const handleSaveDocument = (docData) => {
     if (selectedDoc) {
-      if (selectedDoc.filePath && docData.filePath && selectedDoc.filePath !== docData.filePath) {
-        deleteDocumentFile(selectedDoc);
-      }
+      // The previous file is kept as a version by DocumentModal, so the old
+      // storage file is NOT deleted here.
       onEditDocument({ ...selectedDoc, ...docData, projectId: activeProjectId });
     } else {
       onAddDocument({ ...docData, projectId: activeProjectId });
     }
+  };
+
+  const handleDownloadVersion = async (version) => {
+    const url = await getDocumentDownloadUrl({ ...historyDoc, filePath: version.filePath, fileData: version.fileData });
+    if (url) {
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = `${historyDoc?.name} v${version.n}`;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    } else {
+      showToast(`Downloading version ${version.n}`, 'info');
+    }
+  };
+
+  const handleRestoreVersion = (version) => {
+    const updated = {
+      ...historyDoc,
+      filePath: version.filePath,
+      fileData: version.fileData,
+      size: version.size,
+      fileVersion: (historyDoc?.fileVersion || 1) + 1,
+    };
+    onRestoreVersion({ ...updated, projectId: activeProjectId });
+    setHistoryDoc(null);
+    showToast(`Version ${version.n} restored as current file.`);
   };
 
   const handleEditDocClick = (doc) => {
@@ -302,6 +333,16 @@ export default function DocumentsPage({
                     >
                       <Download className="w-4 h-4" />
                     </button>
+                    {can('document.edit') && doc.versions?.length > 0 && (
+                      <button
+                        onClick={() => setHistoryDoc(doc)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                        title="Version history"
+                        aria-label={`Version history for ${doc.name}`}
+                      >
+                        <History className="w-4 h-4" />
+                      </button>
+                    )}
                     {can('document.edit') && (
                       <button
                         onClick={() => handleEditDocClick(doc)}
@@ -353,6 +394,14 @@ export default function DocumentsPage({
         documentItem={previewDoc}
         onClose={() => setPreviewDoc(null)}
         onDownload={handleDownload}
+      />
+
+      {/* Version History */}
+      <VersionHistoryModal
+        documentItem={historyDoc}
+        onClose={() => setHistoryDoc(null)}
+        onDownload={handleDownloadVersion}
+        onRestore={handleRestoreVersion}
       />
 
       {/* Confirm Delete Category */}

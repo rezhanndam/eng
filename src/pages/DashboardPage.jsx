@@ -7,7 +7,7 @@ import usePageLoading from '../hooks/usePageLoading';
 import { TableSkeleton } from '../components/Skeleton';
 import { daysUntil } from '../utils/dates';
 
-export default function DashboardPage({ activeProject, tasks = [], activity = [], onSwitchProject }) {
+export default function DashboardPage({ activeProject, tasks = [], activity = [], documents = [], projects = [], onSelectProject, onSwitchProject }) {
   const loading = usePageLoading();
   const projectTasks = tasks.filter((t) => t.projectId === activeProject.id);
   const reminders = projectTasks.filter((task) => task.status !== 'Completed' && (daysUntil(task.deadline) ?? 999) <= 7);
@@ -54,7 +54,7 @@ export default function DashboardPage({ activeProject, tasks = [], activity = []
   if (loading) {
     return (
       <>
-        <TopHeader activeProject={activeProject} tasks={projectTasks} reminders={reminders.length} activity={activity} onSwitchProject={onSwitchProject} />
+        <TopHeader activeProject={activeProject} tasks={projectTasks} reminders={reminders.length} activity={activity} documents={documents} projects={projects} onSelectProject={onSelectProject} onSwitchProject={onSwitchProject} />
         <div className="mb-6 h-[76px] bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {[0, 1, 2, 3].map((i) => (
@@ -72,7 +72,7 @@ export default function DashboardPage({ activeProject, tasks = [], activity = []
 
   return (
     <>
-      <TopHeader activeProject={activeProject} tasks={projectTasks} reminders={reminders.length} activity={activity} onSwitchProject={onSwitchProject} />
+      <TopHeader activeProject={activeProject} tasks={projectTasks} reminders={reminders.length} activity={activity} documents={documents} projects={projects} onSelectProject={onSelectProject} onSwitchProject={onSwitchProject} />
       <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[11px] font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wider block">Currently Viewing Workspace</span>
