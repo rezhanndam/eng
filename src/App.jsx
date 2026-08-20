@@ -16,6 +16,7 @@ const ProjectPortalPage = lazy(() => import('./pages/ProjectPortalPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
 const KanbanPage = lazy(() => import('./pages/KanbanPage'));
+const GanttPage = lazy(() => import('./pages/GanttPage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const TeamPage = lazy(() => import('./pages/TeamPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
@@ -668,6 +669,22 @@ function NavigationWrapper() {
             path="/kanban"
             element={
               <KanbanPage
+                tasks={isolatedTasks}
+                can={projectCan}
+                activeProject={activeProject}
+                teamMembers={teamMembers}
+                documents={documents}
+                categories={activeCategories}
+                onSaveTask={handleSaveTask}
+                onAddDocument={handleAddDocument}
+                onAddTaskComment={handleAddTaskComment}
+              />
+            }
+          />
+          <Route
+            path="/gantt"
+            element={
+              <GanttPage
                 tasks={isolatedTasks}
                 can={projectCan}
                 activeProject={activeProject}

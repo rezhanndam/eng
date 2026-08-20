@@ -12,6 +12,7 @@ import {
   Mail,
   Database,
   SquareKanban,
+  ChartGantt,
 } from 'lucide-react';
 
 export const BRAND = {
@@ -24,6 +25,7 @@ export const MAIN_NAV = [
   { icon: FolderKanban, label: 'Projects', path: '/projects', badge: 5 },
   { icon: ListChecks, label: 'Tasks', path: '/tasks' },
   { icon: SquareKanban, label: 'Kanban', path: '/kanban' },
+  { icon: ChartGantt, label: 'Timeline', path: '/gantt' },
   { icon: FileText, label: 'Documents', path: '/documents' },
   { icon: Users, label: 'Team', path: '/team' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
