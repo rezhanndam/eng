@@ -14,11 +14,13 @@ import { isCloudData, loadWorkspace, saveWorkspaceSafely } from './lib/cloudData
 const ProjectPortalPage = lazy(() => import('./pages/ProjectPortalPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
+const KanbanPage = lazy(() => import('./pages/KanbanPage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const TeamPage = lazy(() => import('./pages/TeamPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const JobActivityReportPage = lazy(() => import('./pages/JobActivityReportPage'));
 const TrashPage = lazy(() => import('./pages/TrashPage'));
+const DataPage = lazy(() => import('./pages/DataPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 
 // Import initial data
@@ -262,6 +264,24 @@ function NavigationWrapper() {
     setActiveProjectId('');
     localStorage.removeItem('activeProjectId');
     navigate('/');
+  };
+
+  const handleImportData = (backup) => {
+    if (Array.isArray(backup.projects)) setProjects(backup.projects);
+    if (Array.isArray(backup.tasks)) setTasks(backup.tasks);
+    if (Array.isArray(backup.documents)) {
+      setDocuments(backup.documents.map((d, i) => ({ ...d, id: d.id || `legacy-doc-${i}` })));
+    }
+    if (backup.categories && typeof backup.categories === 'object') setCategories(backup.categories);
+    if (Array.isArray(backup.teamMembers)) {
+      setTeamMembers(backup.teamMembers.map((m, i) => ({ ...m, id: m.id || `mem-legacy-${i}` })));
+    }
+    if (Array.isArray(backup.activity)) setActivity(backup.activity);
+    if (backup.dailyReports && typeof backup.dailyReports === 'object') setDailyReports(backup.dailyReports);
+    if (Array.isArray(backup.trash)) setTrash(backup.trash);
+    if (Array.isArray(backup.deleted)) deletedRef.current = backup.deleted;
+    logActivity('Imported data backup', 'All data restored from a backup file');
+    showToast('Data imported successfully.');
   };
 
   const handleSaveProject = (projectData) => {
@@ -620,6 +640,21 @@ function NavigationWrapper() {
             }
           />
           <Route
+            path="/kanban"
+            element={
+              <KanbanPage
+                tasks={isolatedTasks}
+                can={can}
+                activeProject={activeProject}
+                teamMembers={teamMembers}
+                documents={documents}
+                categories={activeCategories}
+                onSaveTask={handleSaveTask}
+                onAddDocument={handleAddDocument}
+              />
+            }
+          />
+          <Route
             path="/documents"
             element={
               <DocumentsPage
@@ -649,6 +684,16 @@ function NavigationWrapper() {
                 onRestore={restoreFromTrash}
                 onPermanentDelete={permanentDelete}
                 onEmptyTrash={emptyTrash}
+                can={can}
+              />
+            }
+          />
+          <Route
+            path="/backup"
+            element={
+              <DataPage
+                data={stateRef.current}
+                onImport={handleImportData}
                 can={can}
               />
             }

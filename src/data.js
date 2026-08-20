@@ -10,6 +10,8 @@ import {
   HardDrive,
   MessageCircle,
   Mail,
+  Database,
+  SquareKanban,
 } from 'lucide-react';
 
 export const BRAND = {
@@ -21,11 +23,13 @@ export const MAIN_NAV = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: FolderKanban, label: 'Projects', path: '/projects', badge: 5 },
   { icon: ListChecks, label: 'Tasks', path: '/tasks' },
+  { icon: SquareKanban, label: 'Kanban', path: '/kanban' },
   { icon: FileText, label: 'Documents', path: '/documents' },
   { icon: Users, label: 'Team', path: '/team' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: Activity, label: 'Job Activity Report', path: '/activity' },
   { icon: Trash2, label: 'Trash', path: '/trash' },
+  { icon: Database, label: 'Data', path: '/backup' },
 ];
 
 export const INTEGRATIONS = [
