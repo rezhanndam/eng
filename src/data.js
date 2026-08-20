@@ -10,7 +10,6 @@ import {
   HardDrive,
   MessageCircle,
   Mail,
-  FileSpreadsheet,
 } from 'lucide-react';
 
 export const BRAND = {
@@ -33,7 +32,6 @@ export const INTEGRATIONS = [
   { icon: HardDrive, label: 'Google Drive', id: 'drive' },
   { icon: MessageCircle, label: 'WhatsApp', id: 'whatsapp' },
   { icon: Mail, label: 'Email', id: 'email' },
-  { icon: FileSpreadsheet, label: 'Excel', id: 'excel' },
 ];
 
 export const PROMO = {

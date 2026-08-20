@@ -3,9 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { BRAND, MAIN_NAV, INTEGRATIONS } from '../data';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { downloadTasksCsv } from '../utils/exportCsv';
 
-export default function Sidebar({ activeProject, tasks = [], onSwitchProject, open = false, onClose }) {
+export default function Sidebar({ activeProject, onSwitchProject, open = false, onClose }) {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -20,8 +19,6 @@ export default function Sidebar({ activeProject, tasks = [], onSwitchProject, op
     if (item.label === 'Job Activity Report' && user?.role === 'viewer') return false;
     return item.label !== 'Projects';
   });
-
-  const projectTasks = (tasks || []).filter((t) => t.projectId === activeProject?.id);
 
   const openDrive = () => {
     const link = activeProject?.driveLink?.trim();
@@ -42,17 +39,10 @@ export default function Sidebar({ activeProject, tasks = [], onSwitchProject, op
     window.location.href = 'mailto:';
   };
 
-  const exportExcel = () => {
-    if (!activeProject) return;
-    downloadTasksCsv(projectTasks, activeProject.name);
-    showToast('Task CSV exported.');
-  };
-
   const integrationAction = {
     drive: openDrive,
     whatsapp: openWhatsapp,
     email: openEmail,
-    excel: exportExcel,
   };
 
   return (
