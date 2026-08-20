@@ -30,6 +30,104 @@ const avatarColor = (name = '') => {
 const initials = (name = '') =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 
+const sortByDeadline = (a, b) => {
+  const da = daysUntil(a.deadline);
+  const db = daysUntil(b.deadline);
+  return (da === null ? 999 : da) - (db === null ? 999 : db);
+};
+
+// Shared card markup for both the desktop board and the mobile single column.
+function TaskCard({ task, canEdit, draggable, dragId, onDragStart, onDragEnd, onClick, onOpenComments, menuTaskId, onToggleMenu, onMove }) {
+  const days = daysUntil(task.deadline);
+  const isOverdue = days !== null && days < 0;
+  const isSoon = days !== null && days >= 0 && days <= 7;
+  return (
+    <div
+      data-task-menu
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onClick={onClick}
+      style={{ borderLeftWidth: 4, borderLeftColor: PRIORITY_BORDER[task.priority] || '#e2e8f0' }}
+      className={`relative rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 shadow-sm transition-all ${isOverdue ? 'bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-900/60' : 'bg-white dark:bg-slate-800'} ${canEdit ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : 'cursor-default'} ${dragId === task.id ? 'opacity-50 rotate-2 scale-[0.97] shadow-xl' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 break-words">{task.task}</p>
+        <div className="flex items-center gap-1 shrink-0">
+          {task.documentIds?.length > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500" title="Attached documents">
+              <Paperclip className="w-3 h-3" />
+              {task.documentIds.length}
+            </span>
+          )}
+          {onOpenComments && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenComments(); }}
+              aria-label="Comments"
+              title="Comments"
+              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-0.5"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              {(task.comments?.length || 0) > 0 && <span className="text-[10px] font-semibold">{task.comments.length}</span>}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleMenu(); }}
+              aria-label={`Move ${task.task}`}
+              title="Move task"
+              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+      {menuTaskId === task.id && (
+        <div className="absolute right-2 top-9 z-20 w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 shadow-lg py-1">
+          <p className="px-3 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Move to</p>
+          {COLUMNS.filter((c) => c.status !== task.status).map((c) => (
+            <button
+              key={c.status}
+              onClick={(e) => { e.stopPropagation(); onMove(c.status); }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors cursor-pointer"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+              {c.status}
+            </button>
+          ))}
+        </div>
+      )}
+      {task.category && (
+        <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+          {task.category}
+        </span>
+      )}
+      <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+        {task.priority && (
+          <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${PRIORITY_STYLES[task.priority] || ''}`}>
+            {task.priority}
+          </span>
+        )}
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className={`w-5 h-5 rounded-full ${avatarColor(task.assignee)} text-white text-[9px] font-bold flex items-center justify-center shrink-0`}>
+            {initials(task.assignee)}
+          </span>
+          <span className="text-[11.5px] text-slate-500 dark:text-slate-400 truncate">{task.assignee}</span>
+        </span>
+        <span className="ml-auto flex items-center gap-1.5 shrink-0">
+          {isOverdue && (
+            <span className="px-1.5 py-0.5 rounded bg-red-500 text-white text-[9.5px] font-bold">Overdue</span>
+          )}
+          <span className={`text-[11.5px] font-medium ${isOverdue ? 'text-red-500 dark:text-red-400' : isSoon ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
+            {task.deadline}
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function KanbanPage({ tasks = [], can, activeProject, teamMembers = [], documents = [], categories = [], onSaveTask, onAddDocument, onAddTaskComment }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -37,6 +135,7 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
   const [dragId, setDragId] = useState('');
   const [menuTaskId, setMenuTaskId] = useState('');
   const [commentTaskId, setCommentTaskId] = useState('');
+  const [activeStatus, setActiveStatus] = useState(COLUMNS[0].status);
   const [filterAssignee, setFilterAssignee] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterPriority, setFilterPriority] = useState('All');
@@ -66,6 +165,8 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
 
   const selectedTaskDocs = selectedTask ? documents.filter((d) => selectedTask.documentIds?.includes(d.id)) : [];
   const commentTask = tasks.find((t) => t.id === commentTaskId);
+
+  const tasksByStatus = (status) => filteredTasks.filter((t) => t.status === status).sort(sortByDeadline);
 
   const handleNewTask = () => {
     setSelectedTask(null);
@@ -111,6 +212,15 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
     </select>
   );
 
+  const cardProps = (task) => ({
+    task,
+    canEdit,
+    onOpenComments: onAddTaskComment ? () => setCommentTaskId(task.id) : null,
+    menuTaskId,
+    onToggleMenu: () => setMenuTaskId((cur) => (cur === task.id ? '' : task.id)),
+    onMove: (status) => moveTask(task, status),
+  });
+
   return (
     <div>
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -120,7 +230,7 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
             Kanban Board
           </h1>
           <p className="text-[13.5px] text-slate-400 dark:text-slate-500 mt-1">
-            {activeProject?.name} · {tasks.length} tasks {canEdit ? '· drag to change status' : ''}
+            {activeProject?.name} · {tasks.length} tasks
           </p>
         </div>
         {can('task.create') && (
@@ -148,15 +258,48 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
         )}
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-6 items-start snap-x snap-mandatory">
+      {/* Mobile: status tabs + single column, no horizontal scroll */}
+      <div className="lg:hidden mb-4 flex items-center gap-2 flex-wrap">
         {COLUMNS.map((col) => {
-          const colTasks = filteredTasks
-            .filter((t) => t.status === col.status)
-            .sort((a, b) => {
-              const da = daysUntil(a.deadline);
-              const db = daysUntil(b.deadline);
-              return (da === null ? 999 : da) - (db === null ? 999 : db);
-            });
+          const count = tasksByStatus(col.status).length;
+          return (
+            <button
+              key={col.status}
+              onClick={() => setActiveStatus(col.status)}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12.5px] font-semibold border transition-colors cursor-pointer ${activeStatus === col.status
+                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${col.dot}`} />
+              {col.status}
+              <span className={`text-[11px] ${activeStatus === col.status ? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="lg:hidden space-y-2">
+        {tasksByStatus(activeStatus).length === 0 ? (
+          <p className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center text-[12px] py-8 text-slate-400 dark:text-slate-500">
+            No tasks in {activeStatus}
+          </p>
+        ) : tasksByStatus(activeStatus).map((task) => (
+          <TaskCard
+            key={task.id}
+            {...cardProps(task)}
+            draggable={false}
+            dragId=""
+            onDragStart={undefined}
+            onDragEnd={undefined}
+            onClick={() => canEdit && handleEditTask(task)}
+          />
+        ))}
+      </div>
+
+      {/* Desktop: columns that shrink to fit the viewport (no horizontal scroll) */}
+      <div className="hidden lg:flex gap-3 items-start">
+        {COLUMNS.map((col) => {
+          const colTasks = tasksByStatus(col.status);
           const share = total ? Math.round((colTasks.length / total) * 100) : 0;
           return (
             <div
@@ -168,7 +311,7 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
                 const id = e.dataTransfer.getData('text/plain');
                 if (id) handleDrop(id, col.status);
               }}
-              className={`min-w-[270px] sm:min-w-[290px] flex-1 flex flex-col rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3 transition-colors snap-start ${dragOver === col.status ? 'ring-2 ring-blue-400 bg-blue-50/60 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : ''}`}
+              className={`flex-1 min-w-0 flex flex-col rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3 transition-colors ${dragOver === col.status ? 'ring-2 ring-blue-400 bg-blue-50/60 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : ''}`}
             >
               <div className="mb-3">
                 <div className="flex items-center gap-2">
@@ -187,97 +330,17 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
                     {dragOver === col.status ? 'Drop here' : 'No tasks'}
                   </p>
                 )}
-                {colTasks.map((task) => {
-                  const days = daysUntil(task.deadline);
-                  const isOverdue = days !== null && days < 0;
-                  const isSoon = days !== null && days >= 0 && days <= 7;
-                  return (
-                    <div
-                      key={task.id}
-                      data-task-menu
-                      draggable={canEdit}
-                      onDragStart={(e) => { e.dataTransfer.setData('text/plain', task.id); e.dataTransfer.effectAllowed = 'move'; setDragId(task.id); }}
-                      onDragEnd={() => setDragId('')}
-                      onClick={() => canEdit && handleEditTask(task)}
-                      style={{ borderLeftWidth: 4, borderLeftColor: PRIORITY_BORDER[task.priority] || '#e2e8f0' }}
-                      className={`relative rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 shadow-sm transition-all ${isOverdue ? 'bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-900/60' : 'bg-white dark:bg-slate-800'} ${canEdit ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : 'cursor-default'} ${dragId === task.id ? 'opacity-50 rotate-2 scale-[0.97] shadow-xl' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 break-words">{task.task}</p>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {task.documentIds?.length > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500" title="Attached documents">
-                              <Paperclip className="w-3 h-3" />
-                              {task.documentIds.length}
-                            </span>
-                          )}
-                          {onAddTaskComment && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setCommentTaskId(task.id); }}
-                              aria-label="Comments"
-                              title="Comments"
-                              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-0.5"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                              {(task.comments?.length || 0) > 0 && <span className="text-[10px] font-semibold">{task.comments.length}</span>}
-                            </button>
-                          )}
-                          {canEdit && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setMenuTaskId((cur) => (cur === task.id ? '' : task.id)); }}
-                              aria-label={`Move ${task.task}`}
-                              title="Move task"
-                              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                            >
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {menuTaskId === task.id && (
-                        <div className="absolute right-2 top-9 z-20 w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 shadow-lg py-1">
-                          <p className="px-3 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Move to</p>
-                          {COLUMNS.filter((c) => c.status !== task.status).map((c) => (
-                            <button
-                              key={c.status}
-                              onClick={(e) => { e.stopPropagation(); moveTask(task, c.status); }}
-                              className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors cursor-pointer"
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-                              {c.status}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {task.category && (
-                        <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                          {task.category}
-                        </span>
-                      )}
-                      <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-                        {task.priority && (
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${PRIORITY_STYLES[task.priority] || ''}`}>
-                            {task.priority}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1.5 min-w-0">
-                          <span className={`w-5 h-5 rounded-full ${avatarColor(task.assignee)} text-white text-[9px] font-bold flex items-center justify-center shrink-0`}>
-                            {initials(task.assignee)}
-                          </span>
-                          <span className="text-[11.5px] text-slate-500 dark:text-slate-400 truncate">{task.assignee}</span>
-                        </span>
-                        <span className="ml-auto flex items-center gap-1.5 shrink-0">
-                          {isOverdue && (
-                            <span className="px-1.5 py-0.5 rounded bg-red-500 text-white text-[9.5px] font-bold">Overdue</span>
-                          )}
-                          <span className={`text-[11.5px] font-medium ${isOverdue ? 'text-red-500 dark:text-red-400' : isSoon ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                            {task.deadline}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                {colTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    {...cardProps(task)}
+                    draggable={canEdit}
+                    dragId={dragId}
+                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', task.id); e.dataTransfer.effectAllowed = 'move'; setDragId(task.id); }}
+                    onDragEnd={() => setDragId('')}
+                    onClick={() => canEdit && handleEditTask(task)}
+                  />
+                ))}
               </div>
             </div>
           );
