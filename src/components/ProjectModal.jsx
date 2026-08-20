@@ -29,6 +29,8 @@ export default function ProjectModal({
   const [deadlineInput, setDeadlineInput] = useState('');
   const [lead, setLead] = useState('');
   const [color, setColor] = useState(COLORS[0]);
+  const [driveLink, setDriveLink] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [deadlineError, setDeadlineError] = useState('');
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
@@ -52,6 +54,8 @@ export default function ProjectModal({
       setDeadlineInput(displayDateToInput(project.deadline || ''));
       setLead(project.lead || teamRef.current[0]?.name || TEAM_MEMBERS[0]?.name || '');
       setColor(project.color || COLORS[0]);
+      setDriveLink(project.driveLink || '');
+      setWhatsapp(project.whatsapp || '');
     } else if (!wasOpen.current) {
       setName('');
       setStatus('Planning');
@@ -59,6 +63,8 @@ export default function ProjectModal({
       setDeadlineInput('');
       setLead(teamRef.current[0]?.name || TEAM_MEMBERS[0]?.name || '');
       setColor(COLORS[0]);
+      setDriveLink('');
+      setWhatsapp('');
     }
     wasOpen.current = true;
   }, [isOpen, project]);
@@ -83,6 +89,8 @@ export default function ProjectModal({
       progress: project?.progress ?? 0,
       totalTasks: project?.totalTasks ?? 0,
       completedTasks: project?.completedTasks ?? 0,
+      driveLink: driveLink.trim(),
+      whatsapp: whatsapp.trim(),
     });
     onClose();
   };
@@ -259,6 +267,33 @@ export default function ProjectModal({
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                Google Drive Link
+              </label>
+              <input
+                type="url"
+                value={driveLink}
+                onChange={(e) => setDriveLink(e.target.value)}
+                placeholder="https://drive.google.com/..."
+                className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                WhatsApp Number
+              </label>
+              <input
+                type="tel"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="e.g. 6281234567890"
+                className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+              />
             </div>
           </div>
 

@@ -2,9 +2,12 @@ import { RefreshCw, Zap, LogOut, X } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BRAND, MAIN_NAV, INTEGRATIONS } from '../data';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import { downloadTasksCsv } from '../utils/exportCsv';
 
-export default function Sidebar({ activeProject, onSwitchProject, open = false, onClose }) {
+export default function Sidebar({ activeProject, tasks = [], onSwitchProject, open = false, onClose }) {
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -17,6 +20,40 @@ export default function Sidebar({ activeProject, onSwitchProject, open = false, 
     if (item.label === 'Job Activity Report' && user?.role === 'viewer') return false;
     return item.label !== 'Projects';
   });
+
+  const projectTasks = (tasks || []).filter((t) => t.projectId === activeProject?.id);
+
+  const openDrive = () => {
+    const link = activeProject?.driveLink?.trim();
+    const url = link && !/^https?:\/\//i.test(link) ? `https://${link}` : link;
+    window.open(url || 'https://drive.google.com', '_blank', 'noopener,noreferrer');
+  };
+
+  const openWhatsapp = () => {
+    const number = (activeProject?.whatsapp || '').replace(/\D/g, '');
+    if (!number) {
+      showToast('Set a WhatsApp number in Project settings.', 'info');
+      return;
+    }
+    window.open(`https://wa.me/${number}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const openEmail = () => {
+    window.location.href = 'mailto:';
+  };
+
+  const exportExcel = () => {
+    if (!activeProject) return;
+    downloadTasksCsv(projectTasks, activeProject.name);
+    showToast('Task CSV exported.');
+  };
+
+  const integrationAction = {
+    drive: openDrive,
+    whatsapp: openWhatsapp,
+    email: openEmail,
+    excel: exportExcel,
+  };
 
   return (
     <>
@@ -87,13 +124,15 @@ export default function Sidebar({ activeProject, onSwitchProject, open = false, 
         {INTEGRATIONS.map((item) => {
           const Icon = item.icon;
           return (
-            <div
+            <button
               key={item.label}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] text-slate-400 dark:text-slate-500 select-none"
+              type="button"
+              onClick={integrationAction[item.id]}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] text-slate-500 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200 transition-all duration-200 group cursor-pointer text-left"
             >
-              <Icon className="w-[18px] h-[18px]" />
+              <Icon className="w-[18px] h-[18px] group-hover:scale-105 transition-transform duration-200" />
               <span className="flex-1">{item.label}</span>
-            </div>
+            </button>
           );
         })}
       </nav>
