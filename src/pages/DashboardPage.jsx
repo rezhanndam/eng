@@ -6,6 +6,7 @@ import DataTable from '../components/DataTable';
 import usePageLoading from '../hooks/usePageLoading';
 import { TableSkeleton } from '../components/Skeleton';
 import { daysUntil } from '../utils/dates';
+import { PROJECT_ACCESS_LABELS } from '../auth';
 
 export default function DashboardPage({ activeProject, tasks = [], activity = [], documents = [], projects = [], onSelectProject, onSwitchProject }) {
   const loading = usePageLoading();
@@ -76,7 +77,13 @@ export default function DashboardPage({ activeProject, tasks = [], activity = []
       <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[11px] font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wider block">Currently Viewing Workspace</span>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5">{activeProject.name}</h2>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5 flex items-center gap-2 flex-wrap">{activeProject.name}
+            {activeProject.accessLevel && activeProject.accessLevel !== 'full' && (
+              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 dark:bg-amber-900/40 text-blue-700 dark:text-amber-400">
+                {PROJECT_ACCESS_LABELS[activeProject.accessLevel]}
+              </span>
+            )}
+          </h2>
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 flex-wrap">
           <span>Lead: <strong className="text-slate-700 dark:text-slate-200">{activeProject.lead}</strong></span>

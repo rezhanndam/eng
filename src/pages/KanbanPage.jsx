@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { SquareKanban, Paperclip, Plus, ChevronDown } from 'lucide-react';
+import { SquareKanban, Paperclip, Plus, ChevronDown, MessageSquare } from 'lucide-react';
 import TaskModal from '../components/TaskModal';
+import CommentsModal from '../components/CommentsModal';
 import { daysUntil } from '../utils/dates';
 
 const COLUMNS = [
@@ -29,12 +30,13 @@ const avatarColor = (name = '') => {
 const initials = (name = '') =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 
-export default function KanbanPage({ tasks = [], can, activeProject, teamMembers = [], documents = [], categories = [], onSaveTask, onAddDocument }) {
+export default function KanbanPage({ tasks = [], can, activeProject, teamMembers = [], documents = [], categories = [], onSaveTask, onAddDocument, onAddTaskComment }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [dragOver, setDragOver] = useState('');
   const [dragId, setDragId] = useState('');
   const [menuTaskId, setMenuTaskId] = useState('');
+  const [commentTaskId, setCommentTaskId] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterPriority, setFilterPriority] = useState('All');
@@ -63,6 +65,7 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
   }, [menuTaskId]);
 
   const selectedTaskDocs = selectedTask ? documents.filter((d) => selectedTask.documentIds?.includes(d.id)) : [];
+  const commentTask = tasks.find((t) => t.id === commentTaskId);
 
   const handleNewTask = () => {
     setSelectedTask(null);
@@ -208,6 +211,17 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
                               {task.documentIds.length}
                             </span>
                           )}
+                          {onAddTaskComment && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setCommentTaskId(task.id); }}
+                              aria-label="Comments"
+                              title="Comments"
+                              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-0.5"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              {(task.comments?.length || 0) > 0 && <span className="text-[10px] font-semibold">{task.comments.length}</span>}
+                            </button>
+                          )}
                           {canEdit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setMenuTaskId((cur) => (cur === task.id ? '' : task.id)); }}
@@ -269,6 +283,14 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
           );
         })}
       </div>
+
+      <CommentsModal
+        item={commentTask}
+        title="Task Comments"
+        onAdd={(text) => onAddTaskComment(commentTask.id, text)}
+        onClose={() => setCommentTaskId('')}
+        canAdd={canEdit}
+      />
 
       <TaskModal
         isOpen={isTaskModalOpen}

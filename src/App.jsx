@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import { deleteDocumentFiles } from './lib/docStorage';
 import { isCloudData, loadWorkspace, saveWorkspaceSafely } from './lib/cloudData';
+import { PROJECT_ACCESS_PERMISSIONS } from './auth';
 
 const ProjectPortalPage = lazy(() => import('./pages/ProjectPortalPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -339,6 +340,15 @@ function NavigationWrapper() {
 
   const activeProject = computedProjects.find((p) => p.id === activeProjectId);
 
+  // Project-scoped permissions: an Editor/Viewer access level on the active
+  // project clamps `can()` regardless of the account role.
+  const projectCan = (permission) => {
+    const level = activeProject?.accessLevel;
+    const levelPerms = PROJECT_ACCESS_PERMISSIONS[level];
+    if (levelPerms) return levelPerms.includes(permission);
+    return can(permission);
+  };
+
   // Redirect logic if no active project, or if the active project no longer
   // exists (e.g. it was deleted on another device while its id was still
   // cached locally). Falling back to the portal avoids crashes on /dashboard.
@@ -355,6 +365,22 @@ function NavigationWrapper() {
   }, [activeProjectId, projects, location.pathname, navigate]);
 
   // Task Actions
+  const handleAddTaskComment = (taskId, text) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const comment = { id: crypto.randomUUID(), user: user?.name || '', text: text.trim(), timestamp: new Date().toISOString() };
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, comments: [...(t.comments || []), comment], updatedAt: new Date().toISOString() } : t)));
+    logActivity('Commented on task', task?.task || taskId);
+    showToast('Comment added.');
+  };
+
+  const handleAddDocumentComment = (docId, text) => {
+    const doc = documents.find((d) => d.id === docId);
+    const comment = { id: crypto.randomUUID(), user: user?.name || '', text: text.trim(), timestamp: new Date().toISOString() };
+    setDocuments((prev) => prev.map((d) => (d.id === docId ? { ...d, comments: [...(d.comments || []), comment], updatedAt: new Date().toISOString() } : d)));
+    logActivity('Commented on document', doc?.name || docId);
+    showToast('Comment added.');
+  };
+
   const handleSaveTask = (newTask) => {
     const isEditing = tasks.some((t) => t.id === newTask.id);
     const data = { ...newTask, updatedAt: new Date().toISOString() };
@@ -373,8 +399,6 @@ function NavigationWrapper() {
   const handleDeleteTask = (taskId) => {
     const task = tasks.find((item) => item.id === taskId);
     const ts = new Date().toISOString();
-    // Documents attached to the task are moved to trash too (not deleted
-    // permanently), so the whole task can be restored later.
     const attachedDocs = documents.filter((d) => task?.documentIds?.includes(d.id) || d.taskId === taskId);
     deletedRef.current = [
       ...deletedRef.current,
@@ -630,12 +654,13 @@ function NavigationWrapper() {
                 projects={computedProjects}
                 onSaveTask={handleSaveTask}
                 onDeleteTask={handleDeleteTask}
-                can={can}
+                can={projectCan}
                 activeProject={activeProject}
                 teamMembers={teamMembers}
                 documents={documents}
                 categories={activeCategories}
                 onAddDocument={handleAddDocument}
+                onAddTaskComment={handleAddTaskComment}
               />
             }
           />
@@ -644,13 +669,14 @@ function NavigationWrapper() {
             element={
               <KanbanPage
                 tasks={isolatedTasks}
-                can={can}
+                can={projectCan}
                 activeProject={activeProject}
                 teamMembers={teamMembers}
                 documents={documents}
                 categories={activeCategories}
                 onSaveTask={handleSaveTask}
                 onAddDocument={handleAddDocument}
+                onAddTaskComment={handleAddTaskComment}
               />
             }
           />
@@ -667,12 +693,13 @@ function NavigationWrapper() {
                 onAddCategory={handleAddCategory}
                 onEditCategory={handleEditCategory}
                 onDeleteCategory={handleDeleteCategory}
+                onAddDocumentComment={handleAddDocumentComment}
                 activeProjectId={activeProjectId}
-                can={can}
+                can={projectCan}
               />
             }
           />
-          <Route path="/team" element={<TeamPage projectTasks={isolatedTasks} teamMembers={teamMembers} canManage={can('team.manage')} onSaveMember={handleSaveMember} onDeleteMember={handleDeleteMember} />} />
+          <Route path="/team" element={<TeamPage projectTasks={isolatedTasks} teamMembers={teamMembers} canManage={projectCan('team.manage')} onSaveMember={handleSaveMember} onDeleteMember={handleDeleteMember} />} />
           <Route path="/reports" element={<ReportsPage projects={activeProject ? [activeProject] : []} tasks={isolatedTasks} documents={isolatedDocs} activity={activity.filter((item) => item.projectId === activeProjectId)} />} />
           <Route path="/activity" element={user?.role === 'viewer' ? <Navigate to="/dashboard" replace /> : <JobActivityReportPage activity={activity.filter((item) => item.projectId === activeProjectId)} activeProject={activeProject} dailyReports={projectDailyReports} onSaveDailyReport={handleSaveDailyReport} onDeleteDailyReport={handleDeleteDailyReport} />} />
           <Route path="/messages" element={<Navigate to="/activity" replace />} />
@@ -684,7 +711,7 @@ function NavigationWrapper() {
                 onRestore={restoreFromTrash}
                 onPermanentDelete={permanentDelete}
                 onEmptyTrash={emptyTrash}
-                can={can}
+                can={projectCan}
               />
             }
           />

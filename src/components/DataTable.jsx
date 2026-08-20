@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, ChevronDown, Edit2, Trash2, ListChecks, ArrowUpDown, Paperclip, Tags } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronDown, Edit2, Trash2, ListChecks, ArrowUpDown, Paperclip, Tags, MessageSquare } from 'lucide-react';
 import { TASK_COLUMNS } from '../data';
 import { daysUntil } from '../utils/dates';
 import EmptyState from './EmptyState';
 import ConfirmModal from './ConfirmModal';
+import CommentsModal from './CommentsModal';
 
 const STATUS_STYLES = {
   Completed: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400',
@@ -32,7 +33,7 @@ const deadlineState = (deadline) => {
   return 'normal';
 };
 
-export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTask, onDeleteTask }) {
+export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTask, onDeleteTask, onCommentTask, canComment = true }) {
   const [checkedRows, setCheckedRows] = useState(new Set());
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All Statuses');
@@ -40,6 +41,7 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
   const [category, setCategory] = useState('All Categories');
   const [sortBy, setSortBy] = useState('deadline');
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [commentTaskId, setCommentTaskId] = useState(null);
 
   const categoryOptions = [...new Set(tasks.map((task) => task.category).filter(Boolean))];
 
@@ -98,6 +100,7 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
 
   const showActions = Boolean(onEditTask || onDeleteTask);
   const columns = showActions ? [...TASK_COLUMNS, 'Actions'] : TASK_COLUMNS;
+  const commentTask = tasks.find((t) => t.id === commentTaskId);
   const hasFilters = query || status !== 'All Statuses' || priority !== 'All Priorities' || category !== 'All Categories' || sortBy !== 'deadline';
 
   return (
@@ -175,7 +178,7 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
               <td className="px-5 py-3.5"><span className={`inline-block px-2.5 py-1 rounded-full text-[12px] font-medium ${PRIORITY_STYLES[task.priority]}`}>{task.priority}</span></td>
               <td className="px-5 py-3.5"><span className={`inline-block px-2.5 py-1 rounded-full text-[12px] font-medium ${STATUS_STYLES[task.status]}`}>{task.status}</span></td>
               <td className={`px-5 py-3.5 text-[13px] font-medium ${DEADLINE_STYLES[deadline]}`}>{task.deadline}</td>
-              {showActions && <td className="px-5 py-3.5"><div className="flex items-center gap-2">{onEditTask && <button onClick={() => onEditTask(task)} aria-label="Edit task" className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"><Edit2 className="w-3.5 h-3.5" /></button>}{onDeleteTask && <button onClick={() => setPendingDelete(task)} aria-label="Delete task" className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>}</div></td>}
+              {showActions && <td className="px-5 py-3.5"><div className="flex items-center gap-2">{onCommentTask && <button onClick={() => setCommentTaskId(task.id)} aria-label="Comments" title="Comments" className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-0.5"><MessageSquare className="w-3.5 h-3.5" />{task.comments?.length > 0 && <span className="text-[10px] font-semibold">{task.comments.length}</span>}</button>}{onEditTask && <button onClick={() => onEditTask(task)} aria-label="Edit task" className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"><Edit2 className="w-3.5 h-3.5" /></button>}{onDeleteTask && <button onClick={() => setPendingDelete(task)} aria-label="Delete task" className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>}</div></td>}
             </tr>;
           })}
           {filteredTasks.length === 0 && <tr><td colSpan={columns.length} className="px-5"><EmptyState icon={ListChecks} title={tasks.length ? 'No matching tasks' : 'No tasks yet'} description={tasks.length ? 'Try changing the search or filter options.' : 'Create your first task to start tracking progress.'} actionLabel={tasks.length ? 'Clear Filters' : undefined} onAction={tasks.length ? clearFilters : undefined} /></td></tr>}
@@ -189,6 +192,14 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
         title="Delete task"
         message={`Are you sure you want to delete "${pendingDelete?.task}"? This action cannot be undone.`}
         confirmLabel="Delete"
+      />
+
+      <CommentsModal
+        item={commentTask}
+        title="Task Comments"
+        onAdd={(text) => onCommentTask(commentTask.id, text)}
+        onClose={() => setCommentTaskId(null)}
+        canAdd={canComment}
       />
     </div>
   );

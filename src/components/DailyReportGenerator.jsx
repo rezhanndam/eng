@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, ClipboardCopy, History, Loader, Trash2, Plus, Minus, Save } from 'lucide-react';
+import { CalendarDays, ClipboardCopy, History, Loader, Trash2, Plus, Minus, Save, Printer } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { buildText, formatDateDDMMYYYY, todayInputValue, reformatText, nextLinePrefix } from '../utils/dailyReport';
@@ -44,6 +44,9 @@ const normalizeBlocks = (blocks) => (blocks || []).map((block) => ({
     customText: act.customText || '',
 })),
 }));
+
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const toHtml = (t) => esc(t).replace(/\n/g, '<br>');
 
 export default function DailyReportGenerator({ reports = [], onSaveReport, onDeleteReport }) {
   const { user } = useAuth();
@@ -107,6 +110,58 @@ export default function DailyReportGenerator({ reports = [], onSaveReport, onDel
     requestAnimationFrame(() => {
       el.selectionStart = el.selectionEnd = selectionStart + 1 + prefix.length;
     });
+  };
+
+  const handlePrintPdf = () => {
+    const win = window.open('', '_blank', 'width=820,height=1100');
+    if (!win) {
+      showToast('Popup diblokir. Izinkan popup lalu coba lagi.', 'error');
+      return;
+    }
+    const displayName = (name || '').trim() || '-';
+    const populated = (blocks || []).filter((b) => (b.activities || []).some((a) => (a.text || '').trim()));
+    const rows = [];
+    populated.forEach((b) => {
+      const start = (b.start || '').trim();
+      const end = (b.end || '').trim();
+      if (start || end) rows.push(`<p class="jam">${esc(start)} - ${esc(end)}</p>`);
+      (b.activities || []).forEach((a) => {
+        if (!(a.text || '').trim()) return;
+        const label = statusLabel(a.status, a.customText);
+        rows.push(`<p class="act">${toHtml(a.text)}${label ? ` <span class="status">(${esc(label)})</span>` : ''}</p>`);
+      });
+    });
+    const outputs = [];
+    populated.forEach((b) => {
+      (b.activities || []).forEach((a) => {
+        if (!(a.text || '').trim()) return;
+        const label = statusLabel(a.status, a.customText);
+        outputs.push(`<p class="act">${toHtml(a.text)}${label ? ` <span class="status">(${esc(label)})</span>` : ''}</p>`);
+      });
+    });
+    const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Daily Report ${formatDateDDMMYYYY(date)}</title>
+<style>
+  body { font-family: 'Courier New', Consolas, monospace; color: #111; background: #fff; padding: 40px; font-size: 13px; line-height: 1.6; }
+  h1 { font-size: 16px; margin: 0 0 16px; }
+  h2 { font-size: 14px; margin: 24px 0 8px; }
+  p  { margin: 2px 0; }
+  .jam { font-weight: bold; margin-top: 10px; }
+  .status { color: #555; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+  <h1>MEASURING DAILY WORK</h1>
+  <p>Name : ${esc(displayName)}</p>
+  <p>Date : ${formatDateDDMMYYYY(date)}</p>
+  <h2>Today Activities</h2>
+  ${rows.join('')}
+  <h2>Output</h2>
+  ${outputs.join('')}
+</body></html>`;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
   };
 
   const handleCopy = async () => {
@@ -311,6 +366,15 @@ export default function DailyReportGenerator({ reports = [], onSaveReport, onDel
               {copied ? 'Tersalin!' : 'Salin Teks untuk WhatsApp'}
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handlePrintPdf}
+            className="mt-2.5 w-full h-10 px-4 text-[13px] font-medium border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak / Export PDF
+          </button>
         </section>
 
         <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">

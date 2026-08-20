@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { FileText, Download, Trash, Upload, Search, Folder, ChevronRight, Plus, Edit, Trash2, FolderOpen, Eye, History } from 'lucide-react';
+import { FileText, Download, Trash, Upload, Search, Folder, ChevronRight, Plus, Edit, Trash2, FolderOpen, Eye, History, MessageSquare } from 'lucide-react';
 import CategoryModal from '../components/CategoryModal';
 import DocumentModal from '../components/DocumentModal';
 import DocumentPreview from '../components/DocumentPreview';
 import VersionHistoryModal from '../components/VersionHistoryModal';
+import CommentsModal from '../components/CommentsModal';
 import EmptyState from '../components/EmptyState';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../hooks/useToast';
@@ -22,6 +23,7 @@ export default function DocumentsPage({
   onEditDocument,
   onDeleteDocument,
   onRestoreVersion,
+  onAddDocumentComment,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
@@ -49,6 +51,10 @@ export default function DocumentsPage({
 
   // Version history state
   const [historyDoc, setHistoryDoc] = useState(null);
+
+  // Comment state
+  const [commentDocId, setCommentDocId] = useState(null);
+  const commentDoc = commentDocId ? documents.find((d) => d.id === commentDocId) : null;
 
   // Filter documents by search and active category
   const filteredDocs = documents.filter((doc) => {
@@ -333,6 +339,17 @@ export default function DocumentsPage({
                     >
                       <Download className="w-4 h-4" />
                     </button>
+                    {onAddDocumentComment && (
+                      <button
+                        onClick={() => setCommentDocId(doc.id)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                        title="Comments"
+                        aria-label={`Comments for ${doc.name}`}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        {(doc.comments?.length || 0) > 0 && <span className="ml-0.5 text-[10px] font-semibold">{doc.comments.length}</span>}
+                      </button>
+                    )}
                     {can('document.edit') && doc.versions?.length > 0 && (
                       <button
                         onClick={() => setHistoryDoc(doc)}
@@ -402,6 +419,15 @@ export default function DocumentsPage({
         onClose={() => setHistoryDoc(null)}
         onDownload={handleDownloadVersion}
         onRestore={handleRestoreVersion}
+      />
+
+      {/* Comments */}
+      <CommentsModal
+        item={commentDoc}
+        title="Document Comments"
+        onAdd={(text) => onAddDocumentComment(commentDoc.id, text)}
+        onClose={() => setCommentDocId(null)}
+        canAdd={can('document.edit')}
       />
 
       {/* Confirm Delete Category */}

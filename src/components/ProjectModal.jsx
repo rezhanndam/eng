@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Pencil } from 'lucide-react';
 import { TEAM_MEMBERS } from '../data';
 import { isValidDisplayDate, displayDateToInput, inputToDisplay } from '../utils/dates';
+import { PROJECT_ACCESS_LABELS } from '../auth';
 import TeamModal from './TeamModal';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
@@ -31,6 +32,7 @@ export default function ProjectModal({
   const [color, setColor] = useState(COLORS[0]);
   const [driveLink, setDriveLink] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [accessLevel, setAccessLevel] = useState('full');
   const [deadlineError, setDeadlineError] = useState('');
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
@@ -56,6 +58,7 @@ export default function ProjectModal({
       setColor(project.color || COLORS[0]);
       setDriveLink(project.driveLink || '');
       setWhatsapp(project.whatsapp || '');
+      setAccessLevel(project.accessLevel || 'full');
     } else if (!wasOpen.current) {
       setName('');
       setStatus('Planning');
@@ -65,6 +68,7 @@ export default function ProjectModal({
       setColor(COLORS[0]);
       setDriveLink('');
       setWhatsapp('');
+      setAccessLevel('full');
     }
     wasOpen.current = true;
   }, [isOpen, project]);
@@ -91,6 +95,7 @@ export default function ProjectModal({
       completedTasks: project?.completedTasks ?? 0,
       driveLink: driveLink.trim(),
       whatsapp: whatsapp.trim(),
+      accessLevel,
     });
     onClose();
   };
@@ -295,6 +300,24 @@ export default function ProjectModal({
                 className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+              Project Access Level
+            </label>
+            <select
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(e.target.value)}
+              className="w-full h-10 px-3 text-[13px] bg-slate-50 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
+            >
+              {Object.entries(PROJECT_ACCESS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+              Editor &amp; View mode membatasi aksi di proyek ini untuk semua pengguna.
+            </p>
           </div>
 
           <div>

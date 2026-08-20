@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import TaskModal from '../components/TaskModal';
 
-export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, activeProject, teamMembers = [], documents = [], categories = [], onAddDocument }) {
+export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, activeProject, teamMembers = [], documents = [], categories = [], onAddDocument, onAddTaskComment }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
 
@@ -42,6 +42,8 @@ export default function TasksPage({ tasks, onSaveTask, onDeleteTask, can, active
         title="Project Tasks"
         onEditTask={can('task.edit') ? handleEditTask : undefined}
         onDeleteTask={can('task.delete') ? onDeleteTask : undefined}
+        onCommentTask={onAddTaskComment}
+        canComment={can('task.edit')}
       />
 
       <TaskModal
