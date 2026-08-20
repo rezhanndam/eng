@@ -288,6 +288,8 @@ function NavigationWrapper() {
 
   const handleSaveProject = (projectData) => {
     const isEditing = projects.some((p) => p.id === projectData.id);
+    const oldProject = projects.find((p) => p.id === projectData.id);
+    const renamed = isEditing && oldProject?.name !== projectData.name;
     const data = { ...projectData, updatedAt: new Date().toISOString() };
     setProjects((prev) => {
       const exists = prev.some((p) => p.id === data.id);
@@ -296,6 +298,12 @@ function NavigationWrapper() {
       }
       return [...prev, data];
     });
+    // Tasks keep a denormalized project-name copy; cascade a rename to them so
+    // tables/kanban/timeline do not show the old name.
+    if (renamed) {
+      const ts = new Date().toISOString();
+      setTasks((prev) => prev.map((t) => (t.projectId === data.id ? { ...t, project: data.name, updatedAt: ts } : t)));
+    }
     if (!categories[data.id]) {
       setCategories((prev) => ({ ...prev, [data.id]: initialCategories }));
     }
