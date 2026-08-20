@@ -55,7 +55,7 @@ export default function TeamModal({ isOpen, onClose, onSave, member = null }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-md w-full overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-md w-full overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
           <h3 className="font-bold text-slate-800 dark:text-slate-100 text-[15px]">
             {member ? 'Edit Team Member' : 'Add Team Member'}
@@ -69,7 +69,7 @@ export default function TeamModal({ isOpen, onClose, onSave, member = null }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               Full Name
@@ -102,7 +102,7 @@ export default function TeamModal({ isOpen, onClose, onSave, member = null }) {
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               Avatar Color
             </label>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               {GRADIENTS.map((g) => (
                 <button
                   key={g}

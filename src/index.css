@@ -26,6 +26,14 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: clip;
+}
+
+/* Prevent iOS Safari from auto-zooming into any focused input/select/textarea. */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
 }
 
 .dark body {

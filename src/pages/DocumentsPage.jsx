@@ -148,7 +148,7 @@ export default function DocumentsPage({
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+          <div className="flex items-center gap-2 text-slate-400 text-sm mb-1 flex-wrap">
             <button
               onClick={() => {
                 setActiveCategory(null);

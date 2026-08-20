@@ -145,7 +145,7 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
         )}
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-6 items-start">
+      <div className="flex gap-4 overflow-x-auto pb-6 items-start snap-x snap-mandatory">
         {COLUMNS.map((col) => {
           const colTasks = filteredTasks
             .filter((t) => t.status === col.status)
@@ -165,7 +165,7 @@ export default function KanbanPage({ tasks = [], can, activeProject, teamMembers
                 const id = e.dataTransfer.getData('text/plain');
                 if (id) handleDrop(id, col.status);
               }}
-              className={`min-w-[270px] sm:min-w-[290px] flex-1 flex flex-col rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3 transition-colors ${dragOver === col.status ? 'ring-2 ring-blue-400 bg-blue-50/60 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : ''}`}
+              className={`min-w-[270px] sm:min-w-[290px] flex-1 flex flex-col rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3 transition-colors snap-start ${dragOver === col.status ? 'ring-2 ring-blue-400 bg-blue-50/60 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : ''}`}
             >
               <div className="mb-3">
                 <div className="flex items-center gap-2">
