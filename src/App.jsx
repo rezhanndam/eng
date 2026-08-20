@@ -256,6 +256,17 @@ function NavigationWrapper() {
     };
   });
 
+  // The project name shown in tables/kanban/timeline is derived from the
+  // projects list instead of the denormalized `task.project` copy, so renames
+  // always propagate everywhere (and stale copies are overwritten).
+  const projectNameById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+  const normalizedTasks = tasks.map((t) => ({ ...t, project: projectNameById[t.projectId] || t.project }));
+  const normalizedTrash = trash.map((entry) =>
+    entry.type === 'task' && entry.item
+      ? { ...entry, item: { ...entry.item, project: projectNameById[entry.item.projectId] || entry.item.project } }
+      : entry
+  );
+
   const handleSelectProject = (id) => {
     setActiveProjectId(id);
     localStorage.setItem('activeProjectId', id);
@@ -626,7 +637,7 @@ function NavigationWrapper() {
   }
 
   // Filter lists according to active project (Project isolation)
-  const isolatedTasks = tasks.filter((t) => t.projectId === activeProjectId);
+  const isolatedTasks = normalizedTasks.filter((t) => t.projectId === activeProjectId);
   const isolatedDocs = documents.filter((d) => d.projectId === activeProjectId);
 
   return (
@@ -644,7 +655,7 @@ function NavigationWrapper() {
             element={
               <DashboardPage
                 activeProject={activeProject}
-                tasks={tasks}
+                tasks={normalizedTasks}
                 activity={activity}
                 documents={isolatedDocs}
                 projects={computedProjects}
@@ -732,7 +743,7 @@ function NavigationWrapper() {
             path="/trash"
             element={
               <TrashPage
-                trash={trash}
+                trash={normalizedTrash}
                 onRestore={restoreFromTrash}
                 onPermanentDelete={permanentDelete}
                 onEmptyTrash={emptyTrash}
