@@ -149,7 +149,7 @@ export default function DataTable({ tasks = [], title = 'Recent Tasks', onEditTa
             const deadline = deadlineState(task.deadline);
             return <tr key={task.id} className="border-b border-slate-50 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
               <td className="px-5 py-3.5"><input type="checkbox" checked={checkedRows.has(task.id)} onChange={() => toggleRow(task.id)} className="w-4 h-4 rounded border-slate-300 dark:border-slate-500 accent-blue-600 cursor-pointer" /></td>
-              <td className="px-5 py-3.5 text-[13px] font-medium text-slate-700 dark:text-slate-200">{task.id}</td>
+              <td className="px-5 py-3.5 text-[13px] font-mono font-medium text-slate-500 dark:text-slate-400">{task.id.startsWith('TSK-') ? task.id.slice(-4) : task.id}</td>
               <td className="px-5 py-3.5 text-[13px] text-slate-700 dark:text-slate-200 font-medium">
                 <span className="inline-flex items-center gap-1.5">
                   {task.task}

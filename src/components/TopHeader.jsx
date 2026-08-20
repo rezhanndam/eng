@@ -42,7 +42,8 @@ export default function TopHeader({ activeProject, tasks = [], reminders = 0, ac
 
   const exportTasks = () => {
     if (!activeProject) return;
-    const rows = [['ID', 'Task', 'Assignee', 'Priority', 'Status', 'Deadline'], ...tasks.map(({ id, task, assignee, priority, status, deadline }) => [id, task, assignee, priority, status, deadline])];
+    const shortId = (id) => String(id).startsWith('TSK-') ? String(id).slice(-4) : id;
+    const rows = [['ID', 'Task', 'Assignee', 'Priority', 'Status', 'Deadline'], ...tasks.map(({ id, task, assignee, priority, status, deadline }) => [shortId(id), task, assignee, priority, status, deadline])];
     const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
