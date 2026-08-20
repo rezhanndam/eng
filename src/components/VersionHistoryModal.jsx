@@ -12,6 +12,8 @@ export default function VersionHistoryModal({ documentItem, onClose, onDownload,
     [documentItem]
   );
 
+  if (!documentItem) return null;
+
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
